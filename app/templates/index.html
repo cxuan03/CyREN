@@ -266,7 +266,7 @@
 
   /* ============ BUDDY ============ */
   #bot{
-    position:fixed;left:300px;top:calc(100vh - 104px);z-index:2000;width:88px;
+    position:fixed;left:calc(100vw - 112px);top:calc(100vh - 104px);z-index:2000;width:88px;
     cursor:grab;touch-action:none;user-select:none;
     transition:left 1.8s cubic-bezier(.45,.05,.35,1), top 1.4s cubic-bezier(.45,.05,.35,1);
     filter:drop-shadow(5px 5px 0 rgba(26,26,26,.85));
@@ -393,7 +393,10 @@
     </div>
     <div class="gsearch">
       <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <button class="input-group-text" style="cursor:pointer" title="Search"
+                onclick="globalGo(document.getElementById('globalSearch').value)">
+          <i class="bi bi-search"></i>
+        </button>
         <input id="globalSearch" type="text" class="form-control"
                placeholder="Search the whole system by IP, attack type, or incident number"
                onkeydown="if(event.key==='Enter')globalGo(this.value)">
@@ -497,10 +500,11 @@
           <div class="col-auto">
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-              <input type="date" class="form-control" value="2026-07-12">
+              <input type="date" class="form-control" id="dateFrom" onchange="syncDateBounds()">
               <span class="input-group-text">to</span>
-              <input type="date" class="form-control" value="2026-07-12">
-              <button class="btn btn-outline-secondary">Apply</button>
+              <input type="date" class="form-control" id="dateTo" onchange="syncDateBounds()">
+              <button class="btn btn-outline-secondary" onclick="applyDateFilter()">Apply</button>
+              <button class="btn btn-outline-secondary" onclick="clearDateFilter()">Clear</button>
             </div>
           </div>
         </div>
@@ -664,9 +668,9 @@
               <div class="col-md-4">
                 <label class="form-label small mb-1">Date Range</label>
                 <div class="input-group">
-                  <input type="date" class="form-control" value="2026-07-12">
+                  <input type="date" class="form-control">
                   <span class="input-group-text">to</span>
-                  <input type="date" class="form-control" value="2026-07-12">
+                  <input type="date" class="form-control">
                 </div>
               </div>
             </div>
@@ -1033,11 +1037,11 @@
                 </div>
                 <div class="col-md-3">
                   <label class="form-label small mb-1">From</label>
-                  <input type="date" class="form-control" value="2026-01-01">
+                  <input type="date" class="form-control">
                 </div>
                 <div class="col-md-3">
                   <label class="form-label small mb-1">To</label>
-                  <input type="date" class="form-control" value="2026-07-12">
+                  <input type="date" class="form-control">
                 </div>
               </div>
             </div>
@@ -2093,6 +2097,37 @@ DROP    all   192.168.56.109   0.0.0.0/0
     _dashTimer = setInterval(loadDashboard, 30000);
   }
 
+  /* ---------- dashboard date-range filter (empty = all data) ---------- */
+  var _dateFrom = '', _dateTo = '';
+  function syncDateBounds() {
+    var f = document.getElementById('dateFrom'), t = document.getElementById('dateTo');
+    t.min = f.value || '';
+    f.max = t.value || '';
+  }
+  function applyDateFilter() {
+    var f = document.getElementById('dateFrom').value;
+    var t = document.getElementById('dateTo').value;
+    if (f && t && f > t) {
+      alert("'From' date cannot be after 'To' date.");
+      return;
+    }
+    _dateFrom = f; _dateTo = t;
+    loadDashboard();
+  }
+  function clearDateFilter() {
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    syncDateBounds();
+    _dateFrom = ''; _dateTo = '';
+    loadDashboard();
+  }
+  function dateQuery() {
+    var qs = [];
+    if (_dateFrom) qs.push('from=' + _dateFrom);
+    if (_dateTo) qs.push('to=' + _dateTo);
+    return qs.length ? '?' + qs.join('&') : '';
+  }
+
   /* logged-in user info in the sidebar */
   function fillUserInfo() {
     var u = window.CURRENT_USER || {};
@@ -2216,7 +2251,8 @@ DROP    all   192.168.56.109   0.0.0.0/0
   async function loadDashboard() {
     var dash, events, chains;
     try {
-      var all = await Promise.all([apiGet('/api/dashboard'), apiGet('/api/events'), apiGet('/api/chains')]);
+      var qs = dateQuery();
+      var all = await Promise.all([apiGet('/api/dashboard' + qs), apiGet('/api/events' + qs), apiGet('/api/chains')]);
       dash = all[0]; events = all[1]; chains = all[2];
     } catch (e) {
       console.error('Dashboard load failed:', e);
@@ -2322,6 +2358,14 @@ DROP    all   192.168.56.109   0.0.0.0/0
     /* sidebar approval badge */
     var nb = document.getElementById('navApproveN');
     if (nb) { nb.textContent = awaiting; nb.style.display = awaiting ? '' : 'none'; }
+
+    /* Buddy: alert only for real, not-yet-announced high-risk events */
+    var seen = window._buddySeen = window._buddySeen || {};
+    var freshHigh = high.filter(function (e) { return e.status !== 'dismissed' && !seen[e.id]; });
+    if (freshHigh.length && window.notifyHighRisk) {
+      freshHigh.forEach(function (e) { seen[e.id] = 1; });
+      notifyHighRisk(freshHigh[0]);
+    }
   }
 </script>
 
@@ -2490,8 +2534,8 @@ DROP    all   192.168.56.109   0.0.0.0/0
 </div>
 <div class="bot-bubble" id="botBubble">
   <b>HIGH RISK !!</b><br>
-  <span style="font-family:monospace">192.168.56.102</span><br>
-  SQL Injection
+  <span style="font-family:monospace" id="botIp"></span><br>
+  <span id="botType"></span>
   <span class="go">Click to view &rarr;</span>
 </div>
 
@@ -2607,15 +2651,17 @@ function filterReports(q){
     if(alerting)placeBubble();
   });
 
-  window.startBotAlert=function(){
-    setTimeout(function(){
-      if(!roamOn())return;    /* notifications off: Buddy stays, but stays quiet */
-      alerting=true;
-      bot.style.left=Math.min(window.innerWidth-360,window.innerWidth*0.45)+'px';
-      bot.style.top=homeTop()+'px';
-      bot.classList.add('alerting');
-      placeBubble();bubble.classList.add('show');
-    },5000);
+  /* Called from loadDashboard() when an unseen high-risk event exists.
+     Buddy stays quietly in the corner unless there is something real to say. */
+  window.notifyHighRisk=function(ev){
+    if(!roamOn())return;    /* notifications off: Buddy stays, but stays quiet */
+    document.getElementById('botIp').textContent=ev.source_ip||'?';
+    document.getElementById('botType').textContent=ev.attack_type||'Unclassified';
+    alerting=true;
+    bot.style.left=Math.min(window.innerWidth-360,window.innerWidth*0.45)+'px';
+    bot.style.top=homeTop()+'px';
+    bot.classList.add('alerting');
+    placeBubble();bubble.classList.add('show');
   };
   function goApprove(){
     if(typeof openEvent==='function')openEvent('alerts','high','done');

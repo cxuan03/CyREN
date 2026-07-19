@@ -16,6 +16,8 @@ interface described in Chapter 3.
     GET  /api/users                  -> User Management (manager only)
     POST /api/ingest                 -> run one event through the pipeline
 """
+from datetime import datetime, timedelta
+
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
@@ -25,11 +27,43 @@ from app.agents.pipeline import run_pipeline
 api = Blueprint("api", __name__, url_prefix="/api")
 
 
+def _parse_date_range():
+    """Read optional ?from=YYYY-MM-DD&to=YYYY-MM-DD query params.
+
+    Returns (start, end, error). `end` is exclusive (start of the next day)
+    so a single-day range covers the whole day.
+    """
+    f = request.args.get("from")
+    t = request.args.get("to")
+    start = end = None
+    try:
+        if f:
+            start = datetime.strptime(f, "%Y-%m-%d")
+        if t:
+            end = datetime.strptime(t, "%Y-%m-%d") + timedelta(days=1)
+    except ValueError:
+        return None, None, "invalid date, expected YYYY-MM-DD"
+    if start and end and start >= end:
+        return None, None, "'from' date must not be after 'to' date"
+    return start, end, None
+
+
+def _apply_date_range(query, start, end):
+    if start:
+        query = query.filter(Event.last_seen >= start)
+    if end:
+        query = query.filter(Event.last_seen < end)
+    return query
+
+
 # ------------------------------------------------------------------ dashboard
 @api.get("/dashboard")
 @login_required
 def dashboard():
-    events = Event.query.all()
+    start, end, err = _parse_date_range()
+    if err:
+        return jsonify({"error": err}), 400
+    events = _apply_date_range(Event.query, start, end).all()
     awaiting = [e for e in events if e.status == "awaiting"]
     blocked = BlockedIP.query.filter_by(active=True).count()
     low = [e for e in events if e.risk == "low"]
@@ -53,7 +87,10 @@ def dashboard():
 @api.get("/events")
 @login_required
 def list_events():
-    q = Event.query
+    start, end, err = _parse_date_range()
+    if err:
+        return jsonify({"error": err}), 400
+    q = _apply_date_range(Event.query, start, end)
     risk = request.args.get("risk")
     status = request.args.get("status")
     ip = request.args.get("ip")
