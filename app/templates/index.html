@@ -2156,7 +2156,7 @@ DROP    all   192.168.56.109   0.0.0.0/0
   }
 
   function logout() {
-    new bootstrap.Modal(document.getElementById('logoutModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('logoutModal')).show();
   }
 
   async function confirmLogout() {
@@ -2639,12 +2639,12 @@ function filterReports(q){
     document.getElementById('botAskState').textContent = on ? 'ON' : 'OFF';
     document.getElementById('botAskState').className = on ? 'badge bg-success' : 'badge bg-secondary';
     document.getElementById('botAskBtn').textContent = on ? 'Turn notifications off' : 'Turn notifications on';
-    new bootstrap.Modal(m).show();
+    bootstrap.Modal.getOrCreateInstance(m).show();
   }
   window.botToggleNotify=function(){
     var sw=document.getElementById('setRoam');
     if(sw){ sw.checked=!sw.checked; sw.dispatchEvent(new Event('change',{bubbles:true})); }
-    bootstrap.Modal.getInstance(document.getElementById('botAskModal')).hide();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('botAskModal')).hide();
   };
   window.addEventListener('resize',function(){
     bot.style.top=clamp(parseFloat(bot.style.top)||homeTop(),0,homeTop())+'px';
