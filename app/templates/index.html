@@ -383,137 +383,8 @@
 </head>
 <body>
 
-<!-- ===== LOGIN ===== -->
-<div id="auth" class="auth-wrap">
-  <div class="container" style="max-width:980px">
-    <div class="row justify-content-center g-4">
-
-      <!-- Sign in -->
-      <div class="col-md-5">
-        <div class="card">
-          <div class="card-body p-4">
-
-            <h3 class="text-center mb-4" style="color:#0d2c50;font-family:Archivo Black,sans-serif;text-transform:uppercase;letter-spacing:1px">Sign In</h3>
-
-            <div class="mb-3">
-              <label class="form-label">Username</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
-                <input type="text" class="form-control" id="loginUser" value="analyst01">
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Password</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-                <input type="password" class="form-control" id="loginPw" value=""
-                       onkeydown="if(event.key==='Enter')login()">
-                <button class="btn btn-outline-secondary" type="button"
-                        onclick="togglePw('loginPw', this)">
-                  <i class="bi bi-eye-fill"></i>
-                </button>
-              </div>
-            </div>
-
-            <div class="d-flex justify-content-end mb-3">
-              <a href="#" class="small">Forgot password?</a>
-            </div>
-
-            <button class="btn btn-primary w-100 py-2" onclick="login()">
-              <i class="bi bi-box-arrow-in-right"></i> Sign In
-            </button>
-
-            <hr class="my-4">
-
-            <p class="text-center text-muted small mb-0">
-              Do not have an account?
-              <a href="#reg" onclick="document.getElementById('reg').scrollIntoView({behavior:'smooth'})">
-                Register here
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Register -->
-      <div class="col-md-5" id="reg">
-        <div class="card">
-          <div class="card-body p-4">
-
-            <h3 class="text-center mb-4" style="color:#0d2c50;font-family:Archivo Black,sans-serif;text-transform:uppercase;letter-spacing:1px">Register</h3>
-
-            <div class="mb-3">
-              <label class="form-label">Full Name</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-person-badge-fill"></i></span>
-                <input type="text" class="form-control" value="Chong Mei San">
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Work Email</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-envelope-fill"></i></span>
-                <input type="email" class="form-control" value="analyst@company.com">
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Role</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-people-fill"></i></span>
-                <select class="form-select">
-                  <option>SOC Analyst</option>
-                  <option>SOC Manager</option>
-                  <option>Read Only</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Password</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-                <input type="password" class="form-control" id="regPw" value="Cyren@2026!x">
-                <button class="btn btn-outline-secondary" type="button"
-                        onclick="togglePw('regPw', this)">
-                  <i class="bi bi-eye-fill"></i>
-                </button>
-              </div>
-              <div style="font-size:0.75rem;color:#9aa0a6;margin-top:4px">
-                Minimum 12 characters, one uppercase, one lowercase, one number, one special character
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Confirm Password</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
-                <input type="password" class="form-control" value="Cyren@2026!x">
-              </div>
-            </div>
-
-            <button class="btn btn-primary w-100 py-2">
-              <i class="bi bi-person-plus-fill"></i> Create Account
-            </button>
-
-            <hr class="my-4">
-
-            <p class="text-center text-muted small mb-0">
-              Already have an account?
-              <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'})">Sign in</a>
-            </p>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- ===== APP ===== -->
-<div id="app" class="layout" style="display:none !important">
+<!-- ===== APP (login lives on /login, register on /register) ===== -->
+<div id="app" class="layout">
 
   <header class="app-header">
     <div class="brand">
@@ -563,10 +434,10 @@
 
       <div class="side-user">
         <div class="d-flex align-items-center mb-2">
-          <div class="avatar me-2">CM</div>
+          <div class="avatar me-2" id="userAvatar">?</div>
           <div>
-            <div class="name">Chong Mei San</div>
-            <div class="role">SOC Analyst</div>
+            <div class="name" id="userName">&ndash;</div>
+            <div class="role" id="userRole">&ndash;</div>
           </div>
         </div>
         <button class="btn btn-sm w-100 logout-btn" onclick="logout()">
@@ -2179,8 +2050,29 @@ DROP    all   192.168.56.109   0.0.0.0/0
   </div>
 </div>
 
+<div class="modal fade" id="logoutModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title mb-0"><i class="bi bi-box-arrow-right"></i> Log Out</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small mb-0">Are you sure you want to log out of CyREN?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm btn-danger" onclick="confirmLogout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  window.CURRENT_USER = {{ (current_user.to_dict() if current_user.is_authenticated else {}) | tojson }};
+</script>
 <script>
   function go(p) {
     document.querySelectorAll('.page').forEach(function(e){ e.classList.remove('active'); });
@@ -2201,41 +2093,23 @@ DROP    all   192.168.56.109   0.0.0.0/0
     _dashTimer = setInterval(loadDashboard, 30000);
   }
 
-  async function login() {
-    var u = document.getElementById('loginUser').value.trim();
-    var p = document.getElementById('loginPw').value;
-    var res;
-    try {
-      res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: u, password: p })
-      });
-    } catch (e) {
-      alert('Cannot reach the CyREN server. Is it running?');
-      return false;
-    }
-    var data = await res.json().catch(function () { return {}; });
-    if (!res.ok || !data.ok) {
-      alert(data.error || 'Invalid username or password');
-      return false;
-    }
-    document.getElementById('auth').style.display = 'none';
-    document.getElementById('app').style.setProperty('display', 'flex', 'important');
+  /* logged-in user info in the sidebar */
+  function fillUserInfo() {
+    var u = window.CURRENT_USER || {};
+    if (!u.username) return;
+    var initials = (u.full_name || u.username).split(/\s+/)
+      .map(function (w) { return w.charAt(0); }).join('').toUpperCase().slice(0, 2);
+    document.getElementById('userAvatar').textContent = initials || '?';
+    document.getElementById('userName').textContent = u.full_name || u.username;
+    document.getElementById('userRole').textContent = u.role === 'manager' ? 'SOC Manager' : 'SOC Analyst';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    fillUserInfo();
     drawCharts();
     loadDashboard();
     startDashRefresh();
-    return true;
-  }
-
-  function togglePw(id, btn) {
-    var f = document.getElementById(id);
-    var on = f.type === 'password';
-    f.type = on ? 'text' : 'password';
-    btn.innerHTML = on
-      ? '<i class="bi bi-eye-slash"></i>'
-      : '<i class="bi bi-eye"></i>';
-  }
+  });
 
   function unlockThr() {
     document.getElementById('thrLocked').style.display = 'none';
@@ -2247,11 +2121,13 @@ DROP    all   192.168.56.109   0.0.0.0/0
   }
 
   function logout() {
+    new bootstrap.Modal(document.getElementById('logoutModal')).show();
+  }
+
+  async function confirmLogout() {
     if (_dashTimer) { clearInterval(_dashTimer); _dashTimer = null; }
-    fetch('/api/logout', { method: 'POST' }).catch(function () {});
-    document.getElementById('app').style.setProperty('display', 'none', 'important');
-    document.getElementById('auth').style.display = 'flex';
-    go('dash');
+    try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
+    location.href = '/login';
   }
 
   Chart.defaults.animation = false;
@@ -2328,7 +2204,12 @@ DROP    all   192.168.56.109   0.0.0.0/0
   async function apiGet(url) {
     var res = await fetch(url);
     var ct = res.headers.get('content-type') || '';
-    if (!res.ok || ct.indexOf('json') === -1) throw new Error(url + ' failed (' + res.status + ')');
+    if (res.status === 401 || ct.indexOf('json') === -1) {
+      /* session expired: the API redirected us to the login page */
+      location.href = '/login';
+      throw new Error('not authenticated');
+    }
+    if (!res.ok) throw new Error(url + ' failed (' + res.status + ')');
     return res.json();
   }
 
@@ -2743,11 +2624,6 @@ function filterReports(q){
     alerting=false;
   }
   bubble.addEventListener('click',goApprove);
-
-  var _login=window.login;
-  window.login=function(){
-    Promise.resolve(_login()).then(function(ok){ if(ok) startBotAlert(); });
-  };
 
 })();
 </script>

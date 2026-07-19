@@ -5,8 +5,8 @@ Flask application factory for CyREN.
     app = create_app()
 """
 import os
-from flask import Flask, render_template
-from flask_login import LoginManager
+from flask import Flask, render_template, redirect, url_for
+from flask_login import LoginManager, current_user
 from flask_cors import CORS
 
 from config.settings import settings
@@ -52,6 +52,8 @@ def create_app():
 
     @app.get("/")
     def home():
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login_page"))
         return render_template("index.html")
 
     with app.app_context():
