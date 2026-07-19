@@ -1,0 +1,2865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyREN</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Space Grotesk',sans-serif; background:#fff8e7; color:#1a1a1a; font-weight:500; }
+  .auth-wrap { min-height:100vh; background:#fff8e7; display:flex; align-items:center; padding:40px 20px; }
+
+  .layout { display:flex; flex-direction:column; height:100vh; }
+
+  .app-header {
+    background:#0d2c50; border-bottom:4px solid #1a1a1a;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:.7rem 1.5rem; flex-shrink:0; gap:2rem;
+  }
+  .app-header .brand h4 {
+    color:#fff; font-family:'Archivo Black',sans-serif; letter-spacing:.5px; line-height:1.1;
+  }
+  .app-header .brand small { color:rgba(255,255,255,.65); font-weight:600; font-size:.72rem; }
+
+  .app-body { display:flex; flex:1; min-height:0; }
+
+  .sidebar {
+    width:240px; flex-shrink:0; background:#fff8e7;
+    border-right:4px solid #1a1a1a;
+    display:flex; flex-direction:column;
+  }
+  .side-inner { flex:1; overflow-y:auto; padding:1rem 0 .5rem; }
+  .side-group {
+    font-family:'Archivo Black',sans-serif; text-transform:uppercase;
+    font-size:.68rem; letter-spacing:1px; color:#a09070;
+    padding:.4rem 1.3rem .3rem;
+  }
+  .side-group + ul { margin-bottom:0 !important; }
+  .side-div {
+    height:2px; background:#d8cfb8; margin:.7rem 1.3rem;
+  }
+  .sidebar .nav-link {
+    color:#5a5040; padding:.55rem 1rem; margin:4px 12px; border-radius:6px;
+    font-weight:600; border:3px solid transparent; cursor:pointer;
+  }
+  .sidebar .nav-link:hover { border-color:#1a1a1a; background:#fff; color:#1a1a1a; }
+  .sidebar .nav-link.active {
+    background:#0d2c50; color:#ffd60a; border:3px solid #1a1a1a;
+    box-shadow:3px 3px 0 #1a1a1a; font-weight:700;
+  }
+  .side-user {
+    border-top:4px solid #1a1a1a; padding:.9rem 1rem; flex-shrink:0; background:#fff;
+  }
+  .side-user .avatar {
+    width:38px; height:38px; border-radius:50%; background:#0d2c50; color:#ffd60a;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:.8rem; border:3px solid #1a1a1a; flex-shrink:0;
+  }
+  .side-user .name { color:#1a1a1a; font-size:.85rem; font-weight:700; line-height:1.2; }
+  .side-user .role { color:#8a8070; font-size:.72rem; font-weight:600; }
+  .side-user .logout-btn { background:#fff8e7; color:#1a1a1a; }
+
+  .content { flex:1; min-width:0; overflow-y:auto; background:#e8e6e1; }
+
+  .conf-bar {
+    height:14px; background:#fff; border:2px solid #1a1a1a; border-radius:4px;
+    overflow:hidden; margin:5px 0 3px;
+  }
+  .conf-fill { height:100%; }
+  .conf-lbl { font-size:.78rem; font-weight:700; }
+
+  .conf-mini {
+    display:inline-block; width:52px; height:9px; background:#fff;
+    border:2px solid #1a1a1a; border-radius:3px; overflow:hidden;
+    vertical-align:middle; margin-right:6px;
+  }
+  .conf-mini > div { height:100%; }
+
+  .chip {
+    border:3px solid #1a1a1a; border-radius:6px; background:#fff;
+    padding:.35rem .7rem; font-size:.8rem; font-weight:600; cursor:pointer;
+    box-shadow:2px 2px 0 #1a1a1a;
+  }
+  .chip:active { transform:translate(2px,2px); box-shadow:none; }
+  .chip.active { background:#0d2c50; color:#ffd60a; }
+  .chip-hi.active, .chip-hi:hover { background:#ff5252; color:#fff; }
+  .chip-un.active, .chip-un:hover { background:#ffd60a; color:#1a1a1a; }
+  .chip-lo.active, .chip-lo:hover { background:#06d6a0; color:#1a1a1a; }
+
+  .sortable { cursor:pointer; }
+  .sortable:hover { background:#5b76f0 !important; }
+  .sortable i { font-size:.7rem; opacity:.7; margin-left:3px; }
+
+  .pagination .page-link {
+    border:3px solid #1a1a1a; color:#1a1a1a; font-weight:700;
+    margin:0 2px; border-radius:6px;
+  }
+  .pagination .page-item.active .page-link {
+    background:#0d2c50; border-color:#1a1a1a; color:#ffd60a;
+  }
+  .pagination .page-item.disabled .page-link { background:#e8e6e1; color:#8a8a8a; }
+  .page { display:none; } .page.active { display:block; }
+
+  .card { border:4px solid #1a1a1a !important; border-radius:10px; box-shadow:6px 6px 0 #1a1a1a; background:#fff; }
+  .card-header { border-bottom:4px solid #1a1a1a !important; font-family:'Archivo Black',sans-serif;
+                 text-transform:uppercase; font-size:.85rem; letter-spacing:.6px;
+                 border-radius:6px 6px 0 0 !important; padding:.9rem 1.2rem; }
+  .card-header-navy { background:#4361ee !important; color:#fff !important; }
+
+  .card-blue { background:#dbe4ff; border:3px solid #1a1a1a !important; box-shadow:3px 3px 0 #1a1a1a; }
+
+  .table thead th { background:#4361ee; color:#fff; border:3px solid #1a1a1a;
+                    font-family:'Archivo Black',sans-serif; text-transform:uppercase;
+                    font-size:.72rem; letter-spacing:.5px; text-align:center; padding:.9rem .6rem; }
+  .table td { border:3px solid #1a1a1a; font-weight:500; }
+  .table-hover tbody tr:hover td { background:#fff8e7; }
+
+  .btn { border:3px solid #1a1a1a !important; border-radius:8px; font-weight:700;
+         box-shadow:3px 3px 0 #1a1a1a; font-family:'Space Grotesk',sans-serif; }
+  .btn:active { transform:translate(3px,3px); box-shadow:none; }
+  .btn-primary { background:#4361ee; color:#fff; }
+  .btn-danger { background:#ff5252; color:#fff; }
+  .btn-outline-secondary { background:#fff; color:#1a1a1a; }
+  .btn-outline-primary { background:#fff; color:#1a1a1a; }
+  .btn-outline-danger { background:#fff; color:#c92a2a; }
+
+  .badge { border:2px solid #1a1a1a; border-radius:6px; font-weight:700;
+           font-size:.75rem; padding:.4em .75em; letter-spacing:.2px; }
+  .bg-danger { background:#ff5252 !important; color:#fff !important; }
+  .bg-warning { background:#ffd60a !important; color:#1a1a1a !important; }
+  .bg-success { background:#06d6a0 !important; color:#1a1a1a !important; }
+  .bg-secondary { background:#adb5bd !important; color:#1a1a1a !important; }
+  .bg-primary { background:#4361ee !important; }
+
+  .form-control,.form-select,.input-group-text { border:3px solid #1a1a1a; border-radius:8px;
+                                                  font-weight:500; font-family:'Space Grotesk',sans-serif; }
+  .form-control:focus,.form-select:focus { border-color:#1a1a1a; box-shadow:3px 3px 0 #4361ee; }
+
+  .alert { border:3px solid #1a1a1a; border-radius:8px; box-shadow:3px 3px 0 #1a1a1a; font-weight:600; }
+  .alert-warning { background:#fff3b0; color:#664d00; }
+  .alert-danger { background:#ffc9c9; color:#8a1c1c; }
+  .alert-info { background:#c9dbff; color:#1c3a8a; }
+  .alert-success { background:#b2f2e5; color:#0b5d4d; }
+
+  .log-box { background:#1a1a1a; color:#06d6a0; border:3px solid #1a1a1a; border-radius:8px;
+             font-family:monospace; font-size:.8rem; padding:1rem; white-space:pre; overflow-x:auto; margin:0; }
+
+  .pdf-stage { background:#1a1a1a; border-radius:8px; padding:1rem !important; }
+  .pdf-stage .table thead th { background:#e9ecef !important; color:#1a1a1a !important; border-color:#adb5bd; }
+  .pdf-stage > .d-flex .btn { color:#1a1a1a !important; background:#fff !important; }
+  .pdf-stage > .d-flex code { color:#fff !important; }
+  .pdf-stage .bg-white code { color:#c2185b !important; }
+  .pdf-stage .table td { border-color:#adb5bd; }
+
+  .progress { border:3px solid #1a1a1a; border-radius:8px; }
+
+  h1,h2,h3 { font-family:'Archivo Black',sans-serif; }
+  h5,h6 { font-weight:700; }
+
+  /* ============ COMIC POLISH ============ */
+  .content{
+    background:#f7efda;
+    background-image:radial-gradient(#ddd0a8 1.6px, transparent 1.6px);
+    background-size:17px 17px;
+  }
+  .auth-wrap{
+    background-image:radial-gradient(#e9ddb6 1.6px, transparent 1.6px);
+    background-size:17px 17px;
+  }
+  .btn-primary{background:#0d2c50 !important;color:#ffd60a !important}
+  .table thead th{background:#0d2c50 !important;color:#ffd60a !important}
+  .card-header-navy{background:#0d2c50 !important;color:#ffd60a !important}
+  .sortable:hover{background:#164a85 !important}
+  .form-control:focus,.form-select:focus{box-shadow:3px 3px 0 #ffd60a}
+  .pagination .page-item.active .page-link{background:#0d2c50}
+  .card-blue{background:#fff}
+  .fs-2{font-family:'Archivo Black',sans-serif !important;letter-spacing:.5px}
+  .badge{transform:rotate(-2deg)}
+  ::-webkit-scrollbar{width:12px;height:12px}
+  ::-webkit-scrollbar-thumb{background:#1a1a1a;border-radius:8px;border:3px solid #f7efda}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ---- global search in header ---- */
+  .gsearch{flex:1;max-width:460px}
+  .gsearch .input-group-text{background:#ffd60a}
+  .gsearch .form-control::placeholder{color:#9a927e;font-weight:500}
+
+  /* ---- how-it-flows strip (plain language) ---- */
+  .flow-strip{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:14px 2px 10px}
+  .flow-box{
+    flex:1;min-width:178px;background:#fff;position:relative;
+    border:4px solid #1a1a1a;border-radius:10px;box-shadow:5px 5px 0 #1a1a1a;
+    padding:1rem 1rem .7rem;
+  }
+  .flow-box .step{
+    position:absolute;top:-13px;left:12px;background:#0d2c50;color:#ffd60a;
+    font-family:'Archivo Black',sans-serif;font-size:.58rem;letter-spacing:1px;
+    padding:3px 10px;border:3px solid #1a1a1a;border-radius:6px;
+    transform:rotate(-2deg);box-shadow:2px 2px 0 #1a1a1a;white-space:nowrap;
+  }
+  .flow-box .nm{font-family:'Archivo Black',sans-serif;font-size:.8rem;text-transform:uppercase;letter-spacing:.3px}
+  .flow-box .say{font-size:.7rem;color:#8a8070;font-weight:600;font-style:italic;margin-top:1px}
+  .flow-box .num{font-family:'Archivo Black',sans-serif;font-size:1.1rem;margin-top:.4rem;line-height:1.15}
+  .flow-box .sub{font-size:.68rem;color:#5a5040;font-weight:600}
+  .flow-box.flow-src{background:#0d2c50;color:#fff}
+  .flow-box.flow-src .nm{color:#ffd60a}
+  .flow-box.flow-src .say{color:rgba(255,255,255,.6)}
+  .flow-box.flow-src .sub{color:rgba(255,255,255,.65)}
+  .flow-box.flow-src .step{background:#ffd60a;color:#1a1a1a}
+  .flow-arrow{
+    flex:none;align-self:center;padding:0 7px;color:#1a1a1a;
+    font-family:'Archivo Black',sans-serif;font-size:1.25rem;
+    animation:flowNudge 1.2s ease-in-out infinite;
+  }
+  @keyframes flowNudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+
+  /* ---- folded low-risk card (anti-fatigue) ---- */
+  .card-folded{border-style:dashed !important;background:#fdfaf1}
+  .card-folded .folded-row{cursor:pointer;font-weight:600;color:#5a5040}
+  .card-folded .folded-row:hover{color:#1a1a1a}
+  .card-folded .fold-n{font-family:'Archivo Black',sans-serif;color:#069570;font-size:1.15rem;margin-right:6px}
+
+  /* ---- comic attack chain ---- */
+  .cedge{stroke:#1a1a1a;stroke-width:3;fill:none;stroke-dasharray:7 7;stroke-linecap:round;animation:cdash 1.3s linear infinite}
+  .cedge.pred{stroke:#a09070;stroke-width:2.5}
+  @keyframes cdash{to{stroke-dashoffset:-14}}
+  @keyframes haloPulse{0%,100%{opacity:.4}50%{opacity:.08}}
+
+  /* ---- report cards ---- */
+  .rcard{
+    display:flex;gap:13px;align-items:flex-start;background:#fff;
+    border:4px solid #1a1a1a;border-radius:10px;box-shadow:5px 5px 0 #1a1a1a;
+    padding:.95rem 1.05rem;height:100%;
+  }
+  .rcard .rico{
+    width:48px;height:48px;flex:none;border:3px solid #1a1a1a;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;font-size:1.25rem;
+    box-shadow:2px 2px 0 #1a1a1a;
+  }
+  .rcard .rt{font-family:'Archivo Black',sans-serif;font-size:.8rem;text-transform:uppercase}
+  .rcard .rs{font-size:.76rem;color:#5a5040;font-weight:600;margin-top:2px}
+  .rcard .rfoot{display:flex;gap:6px;align-items:center;margin-top:.6rem;flex-wrap:wrap}
+  .tagm{font-size:.62rem;font-weight:800;border:2px solid #1a1a1a;border-radius:6px;padding:2px 8px;letter-spacing:.3px;transform:rotate(-1.5deg)}
+
+  /* ---- comic toggle switch ---- */
+  .cswitch{position:relative;width:54px;height:28px;display:inline-block;flex:none;cursor:pointer}
+  .cswitch input{display:none}
+  .cswitch .tr{position:absolute;inset:0;background:#fff;border:3px solid #1a1a1a;border-radius:999px;box-shadow:2px 2px 0 #1a1a1a;transition:.15s}
+  .cswitch .tr::after{content:'';position:absolute;top:2.5px;left:3px;width:17px;height:17px;border-radius:50%;background:#1a1a1a;transition:.15s}
+  .cswitch input:checked + .tr{background:#06d6a0}
+  .cswitch input:checked + .tr::after{left:28px}
+  .set-line{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:.7rem 0;border-top:2px solid #eee3c8}
+  .set-line:first-of-type{border-top:none}
+  .set-line .t{font-weight:700;font-size:.85rem}
+  .set-line .d{font-size:.72rem;color:#8a8070;font-weight:600}
+
+  /* ---- donut center ---- */
+  .donut-hold{position:relative;width:200px;height:200px;flex:none}
+  .donut-center{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;pointer-events:none;text-align:center;
+  }
+  .donut-center .n{font-family:'Archivo Black',sans-serif;font-size:1.7rem;line-height:1}
+  .donut-center .l{font-size:.66rem;font-weight:700;color:#8a8070;text-transform:uppercase;letter-spacing:.5px}
+
+  /* ============ BUDDY ============ */
+  #bot{
+    position:fixed;left:300px;top:calc(100vh - 104px);z-index:2000;width:88px;
+    cursor:grab;touch-action:none;user-select:none;
+    transition:left 1.8s cubic-bezier(.45,.05,.35,1), top 1.4s cubic-bezier(.45,.05,.35,1);
+    filter:drop-shadow(5px 5px 0 rgba(26,26,26,.85));
+  }
+  #bot.dragging{cursor:grabbing;transition:none;filter:drop-shadow(8px 10px 0 rgba(26,26,26,.5));transform:scale(1.08)}
+  #bot.sleepy{filter:drop-shadow(5px 5px 0 rgba(26,26,26,.5)) grayscale(.55);opacity:.75}
+  #bot svg{width:100%;display:block;pointer-events:none}
+  #bot .body-g{animation:botBob 2.2s ease-in-out infinite;transform-origin:39px 50px}
+  @keyframes botBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  #bot.walking .body-g{animation:botWaddle .5s ease-in-out infinite}
+  @keyframes botWaddle{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg) translateY(-2px)}}
+  #bot.dragging .body-g{animation:botDangle .6s ease-in-out infinite}
+  @keyframes botDangle{0%,100%{transform:rotate(6deg)}50%{transform:rotate(-6deg)}}
+  #bot.alerting .body-g{animation:botHop .45s ease-in-out infinite}
+  @keyframes botHop{0%,100%{transform:translateY(0)}45%{transform:translateY(-13px)}}
+  #bot .eye{animation:botBlink 4.5s infinite;transform-origin:center}
+  @keyframes botBlink{0%,94%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.12)}}
+  #bot .antenna-light{fill:#ff5252;transition:fill .3s}
+  #bot.alerting .antenna-light{fill:#ff5252}
+  @keyframes botPulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .bot-bubble{
+    position:fixed;z-index:2001;background:#fff;border:4px solid #1a1a1a;border-radius:14px;
+    box-shadow:5px 5px 0 #1a1a1a;padding:.7rem .9rem;max-width:260px;
+    font-size:.8rem;font-weight:600;line-height:1.5;cursor:pointer;
+    opacity:0;transform:translateY(8px) rotate(-1deg);pointer-events:none;
+    transition:opacity .3s,transform .3s;
+  }
+  .bot-bubble.show{opacity:1;transform:translateY(0) rotate(-1deg);pointer-events:auto}
+  .bot-bubble::after{content:'';position:absolute;bottom:-15px;left:24px;border-left:14px solid transparent;border-right:6px solid transparent;border-top:16px solid #1a1a1a}
+  .bot-bubble::before{content:'';position:absolute;bottom:-9px;left:27px;z-index:1;border-left:10px solid transparent;border-right:3px solid transparent;border-top:11px solid #fff}
+  .bot-bubble.below::after{bottom:auto;top:-15px;border-top:none;border-bottom:16px solid #1a1a1a}
+  .bot-bubble.below::before{bottom:auto;top:-9px;border-top:none;border-bottom:11px solid #fff}
+  .bot-bubble b{color:#ff5252;font-family:'Archivo Black',sans-serif;text-transform:uppercase;font-size:.75rem}
+  .bot-bubble .go{display:block;margin-top:3px;color:#0d2c50;font-weight:700;font-size:.72rem}
+
+
+  .tabstrip{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:1.1rem}
+  .tabstrip .ttab{
+    border:3px solid #1a1a1a;border-radius:8px;background:#fff;
+    padding:.42rem 1rem;font-weight:700;font-size:.8rem;cursor:pointer;
+    box-shadow:3px 3px 0 #1a1a1a;user-select:none;
+  }
+  .tabstrip .ttab b{font-family:'Archivo Black',sans-serif;font-size:.72rem;margin-left:3px}
+  .tabstrip .ttab.active{background:#0d2c50;color:#ffd60a}
+  .tabstrip .ttab:active{transform:translate(3px,3px);box-shadow:none}
+
+  .bg-purple{background:#7048e8 !important;color:#fff !important}
+  .alert-purple{background:#e5dbff;color:#3b1d8f}
+  .backbar{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+
+  .alert-navy{background:#dbe4ff;color:#0d2c50}
+  .backbar{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+
+  .sidebar .nav-link.sub{margin-left:22px;font-size:.83rem;padding:.45rem .8rem}
+  .sidebar .nav-link.sub::before{
+    content:'';position:absolute;left:-11px;top:50%;width:8px;height:2px;background:#d8cfb8;
+  }
+  .sidebar .nav-link.sub{position:relative}
+
+
+  .dlegend{display:flex;flex-direction:column;gap:5px;min-width:180px}
+  .dlegend .dl{display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700}
+  .dlegend .sw{width:13px;height:13px;border:2.5px solid #1a1a1a;border-radius:4px;flex:none}
+  .dlegend .ct{margin-left:auto;font-family:'Archivo Black',sans-serif;font-size:.75rem}
+
+  .thr-band{display:flex;border:4px solid #1a1a1a;border-radius:10px;overflow:hidden;box-shadow:4px 4px 0 #1a1a1a}
+  .thr-band .seg{padding:.6rem .5rem;text-align:center;border-right:3px solid #1a1a1a;color:#1a1a1a}
+  .thr-band .seg:last-child{border-right:none}
+  .thr-band .seg b{display:block;font-family:'Archivo Black',sans-serif;font-size:.72rem;letter-spacing:.5px}
+  .thr-band .seg span{display:block;font-size:.72rem;font-weight:700}
+  .thr-band .seg small{display:block;font-size:.66rem;font-weight:600;opacity:.75}
+
+  .conf-key{display:inline-block;width:30px;height:12px;border:2.5px solid #1a1a1a;border-radius:4px;vertical-align:middle;margin-right:4px}
+
+  .scrollbox{max-height:250px;overflow-y:auto;border:3px solid #1a1a1a;border-radius:8px}
+  .scrollbox .table{margin-bottom:0}
+  .scrollbox thead th{position:sticky;top:0;z-index:2}
+
+  .thr-row{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-top:2px solid #eee3c8;flex-wrap:wrap}
+  .thr-row:first-of-type{border-top:none}
+  .thr-lbl{min-width:230px;flex:none}
+  .thr-lbl .t{font-weight:700;font-size:.9rem}
+  .thr-lbl .d{font-size:.72rem;color:#8a8070;font-weight:600;margin-top:2px}
+  .thr-num{width:118px;flex:none}
+  .thr-num .form-control{font-family:'Archivo Black',sans-serif;text-align:center}
+  .thr-slider{
+    -webkit-appearance:none;appearance:none;flex:1;min-width:180px;height:14px;
+    background:#fff;border:3px solid #1a1a1a;border-radius:999px;outline:none;
+    box-shadow:2px 2px 0 #1a1a1a;cursor:pointer;
+  }
+  .thr-slider::-webkit-slider-thumb{
+    -webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+    background:#ffd60a;border:3px solid #1a1a1a;cursor:grab;
+    box-shadow:2px 2px 0 #1a1a1a;
+  }
+  .thr-slider::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}
+  .thr-slider::-moz-range-thumb{
+    width:22px;height:22px;border-radius:50%;background:#ffd60a;
+    border:3px solid #1a1a1a;cursor:grab;
+  }
+
+  .h-row-a{min-height:var(--rowA,auto)}
+  .h-row-b{min-height:var(--rowB,auto)}
+
+  .thr-row.is-locked{opacity:.65}
+  .thr-slider:disabled{cursor:not-allowed;background:#f2eddc}
+  .thr-slider:disabled::-webkit-slider-thumb{background:#d8cfb8;cursor:not-allowed}
+  .thr-slider:disabled::-moz-range-thumb{background:#d8cfb8;cursor:not-allowed}
+  .thr-num .form-control:disabled{background:#f2eddc;color:#1a1a1a;-webkit-text-fill-color:#1a1a1a}
+
+  .flow-link{display:inline-block;margin-top:.4rem;font-size:.68rem;font-weight:700;color:#0d2c50;text-decoration:underline}
+  .flow-link:hover{color:#c2185b}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="auth" class="auth-wrap">
+  <div class="container" style="max-width:980px">
+    <div class="row justify-content-center g-4">
+
+      <!-- Sign in -->
+      <div class="col-md-5">
+        <div class="card">
+          <div class="card-body p-4">
+
+            <h3 class="text-center mb-4" style="color:#0d2c50;font-family:Archivo Black,sans-serif;text-transform:uppercase;letter-spacing:1px">Sign In</h3>
+
+            <div class="mb-3">
+              <label class="form-label">Username</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
+                <input type="text" class="form-control" id="loginUser" value="analyst01">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                <input type="password" class="form-control" id="loginPw" value=""
+                       onkeydown="if(event.key==='Enter')login()">
+                <button class="btn btn-outline-secondary" type="button"
+                        onclick="togglePw('loginPw', this)">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end mb-3">
+              <a href="#" class="small">Forgot password?</a>
+            </div>
+
+            <button class="btn btn-primary w-100 py-2" onclick="login()">
+              <i class="bi bi-box-arrow-in-right"></i> Sign In
+            </button>
+
+            <hr class="my-4">
+
+            <p class="text-center text-muted small mb-0">
+              Do not have an account?
+              <a href="#reg" onclick="document.getElementById('reg').scrollIntoView({behavior:'smooth'})">
+                Register here
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Register -->
+      <div class="col-md-5" id="reg">
+        <div class="card">
+          <div class="card-body p-4">
+
+            <h3 class="text-center mb-4" style="color:#0d2c50;font-family:Archivo Black,sans-serif;text-transform:uppercase;letter-spacing:1px">Register</h3>
+
+            <div class="mb-3">
+              <label class="form-label">Full Name</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person-badge-fill"></i></span>
+                <input type="text" class="form-control" value="Chong Mei San">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Work Email</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope-fill"></i></span>
+                <input type="email" class="form-control" value="analyst@company.com">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Role</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-people-fill"></i></span>
+                <select class="form-select">
+                  <option>SOC Analyst</option>
+                  <option>SOC Manager</option>
+                  <option>Read Only</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                <input type="password" class="form-control" id="regPw" value="Cyren@2026!x">
+                <button class="btn btn-outline-secondary" type="button"
+                        onclick="togglePw('regPw', this)">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+              <div style="font-size:0.75rem;color:#9aa0a6;margin-top:4px">
+                Minimum 12 characters, one uppercase, one lowercase, one number, one special character
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Confirm Password</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
+                <input type="password" class="form-control" value="Cyren@2026!x">
+              </div>
+            </div>
+
+            <button class="btn btn-primary w-100 py-2">
+              <i class="bi bi-person-plus-fill"></i> Create Account
+            </button>
+
+            <hr class="my-4">
+
+            <p class="text-center text-muted small mb-0">
+              Already have an account?
+              <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'})">Sign in</a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app" class="layout" style="display:none !important">
+
+  <header class="app-header">
+    <div class="brand">
+      <h4 class="mb-0">CyREN</h4>
+      <small>SOC Incident Response</small>
+    </div>
+    <div class="gsearch">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input id="globalSearch" type="text" class="form-control"
+               placeholder="Search the whole system by IP, attack type, or incident number"
+               onkeydown="if(event.key==='Enter')globalGo(this.value)">
+      </div>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <nav class="sidebar">
+      <div class="side-inner">
+        <div class="side-group">Monitoring</div>
+        <ul class="nav flex-column mb-2">
+          <li class="nav-item"><a class="nav-link active" data-p="dash"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+        </ul>
+
+        <div class="side-group">Incidents</div>
+        <ul class="nav flex-column mb-2">
+          <li class="nav-item"><a class="nav-link sub" data-p="alerts"><i class="bi bi-list-ul"></i> All Events</a></li>
+          <li class="nav-item"><a class="nav-link sub" data-p="approve"><i class="bi bi-person-check"></i> Human Approval <span class="badge bg-danger ms-1" id="navApproveN" style="display:none">0</span></a></li>
+          <li class="nav-item"><a class="nav-link sub" data-p="chain"><i class="bi bi-diagram-3"></i> Attack Chain</a></li>
+        </ul>
+
+        <div class="side-div"></div>
+        <div class="side-group">Response</div>
+        <ul class="nav flex-column mb-2">
+          <li class="nav-item"><a class="nav-link sub" data-p="blocked"><i class="bi bi-shield-x"></i> Firewall Blocks</a></li>
+          <li class="nav-item"><a class="nav-link sub" data-p="reports"><i class="bi bi-file-earmark-pdf"></i> Incident Reports</a></li>
+        </ul>
+
+        <div class="side-div"></div>
+        <div class="side-group">Account</div>
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link" data-p="users"><i class="bi bi-people"></i> User Management</a></li>
+          <li class="nav-item"><a class="nav-link" data-p="settings"><i class="bi bi-gear"></i> Settings</a></li>
+          <li class="nav-item"><a class="nav-link" data-p="profile"><i class="bi bi-person"></i> My Profile</a></li>
+        </ul>
+      </div>
+
+      <div class="side-user">
+        <div class="d-flex align-items-center mb-2">
+          <div class="avatar me-2">CM</div>
+          <div>
+            <div class="name">Chong Mei San</div>
+            <div class="role">SOC Analyst</div>
+          </div>
+        </div>
+        <button class="btn btn-sm w-100 logout-btn" onclick="logout()">
+          <i class="bi bi-box-arrow-right"></i> Log Out
+        </button>
+      </div>
+    </nav>
+
+    <main class="content">
+      <div class="p-4">
+        <div id="tabStrip" class="tabstrip" style="display:none"></div>
+
+      <!-- ===== DASHBOARD ===== -->
+      <div class="page active" id="p-dash">
+
+        <!-- How alerts move through the system -->
+        <div class="flow-strip mb-3">
+          <div class="flow-box flow-src">
+            <div class="step">FROM THE SIEM</div>
+            <div class="nm">ELK Stack</div>
+            <div class="say">collects every log</div>
+            <div class="num" id="fsLogs">&ndash; <span style="font-size:.7rem">logs today</span></div>
+          </div>
+          <div class="flow-arrow">&#10148;</div>
+          <div class="flow-box">
+            <div class="step">STEP 1</div>
+            <div class="nm">Triage</div>
+            <div class="say">sorts real threats from noise</div>
+            <div class="num" id="fsTriage">&ndash;</div>
+            <a href="#" class="flow-link" id="fsFiltLink" data-bs-toggle="modal" data-bs-target="#triageModal">why were these filtered? &rarr;</a>
+          </div>
+          <div class="flow-arrow">&#10148;</div>
+          <div class="flow-box">
+            <div class="step">STEP 2</div>
+            <div class="nm">Investigate</div>
+            <div class="say">matches MITRE ATT&amp;CK</div>
+            <div class="num" id="fsInv">&ndash; <span style="font-size:.7rem">analysed</span></div>
+          </div>
+          <div class="flow-arrow">&#10148;</div>
+          <div class="flow-box">
+            <div class="step">STEP 3</div>
+            <div class="nm">Correlate</div>
+            <div class="say">links related events</div>
+            <div class="num" id="fsChains">&ndash; <span style="font-size:.7rem">attack chains</span></div>
+          </div>
+          <div class="flow-arrow">&#10148;</div>
+          <div class="flow-box">
+            <div class="step">STEP 4</div>
+            <div class="nm">Respond</div>
+            <div class="say">acts by risk level</div>
+            <div class="num" id="fsResp">&ndash; <span style="font-size:.7rem">blocked</span> &middot; &ndash; <span style="font-size:.7rem">waiting</span></div>
+          </div>
+        </div>
+
+
+        <div class="row mb-3">
+          <div class="col-auto">
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+              <input type="date" class="form-control" value="2026-07-12">
+              <span class="input-group-text">to</span>
+              <input type="date" class="form-control" value="2026-07-12">
+              <button class="btn btn-outline-secondary">Apply</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="card card-blue">
+              <div class="card-body">
+                <div class="text-muted small">Total Alerts</div>
+                <div class="fs-2" id="cardTotal">&ndash;</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card card-blue">
+              <div class="card-body">
+                <div class="text-muted small">True Threats</div>
+                <div class="fs-2 text-danger" id="cardTrue">&ndash;</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card card-blue">
+              <div class="card-body">
+                <div class="text-muted small">False Positives</div>
+                <div class="fs-2 text-success" id="cardFalse">&ndash;</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card card-blue">
+              <div class="card-body">
+                <div class="text-muted small">Blocked IPs</div>
+                <div class="fs-2" id="cardBlocked">&ndash;</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="card card-blue h-100" style="cursor:pointer" onclick="go('blocked')">
+              <div class="card-header d-flex justify-content-between align-items-center" style="background:#ff5252;color:#fff">
+                <span>High Risk</span>
+                <span class="fs-4 fw-bold" id="colHiN">&ndash;</span>
+              </div>
+              <ul class="list-group list-group-flush" id="colHiList">
+                <li class="list-group-item text-muted small">Loading...</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card card-blue h-100" style="cursor:pointer" onclick="go('approve')">
+              <div class="card-header d-flex justify-content-between align-items-center" style="background:#ffd60a;color:#1a1a1a">
+                <span>Uncertain</span>
+                <span class="fs-4 fw-bold" id="colUnN">&ndash;</span>
+              </div>
+              <ul class="list-group list-group-flush" id="colUnList">
+                <li class="list-group-item text-muted small">Loading...</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card card-folded h-100">
+              <div class="card-header d-flex justify-content-between align-items-center" style="background:#06d6a0;color:#1a1a1a">
+                <span>Low Risk</span>
+                <span class="fs-4 fw-bold" id="colLoN">&ndash;</span>
+              </div>
+              <div class="card-body py-2">
+                <div class="folded-row d-flex align-items-center" data-bs-toggle="collapse" data-bs-target="#lowPeek">
+                  <span class="fold-n" id="colLoFold">&ndash;</span>
+                  <span class="small">events the system judged harmless and logged on its own.<br>Nothing here needs you. Click to view.</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </div>
+                <div class="collapse" id="lowPeek">
+                  <ul class="list-group list-group-flush small mt-2" id="colLoList">
+                    <li class="list-group-item text-muted small py-1">Loading...</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header card-header-navy d-flex justify-content-between align-items-center">
+                <span>Attack Types</span>
+                <small style="color:rgba(255,255,255,.85);font-weight:600;text-transform:none;letter-spacing:0">Top 5 shown</small>
+              </div>
+              <div class="card-body">
+                <div class="d-flex align-items-center gap-3 flex-wrap justify-content-center">
+                  <div class="donut-hold"><canvas id="c1"></canvas>
+                    <div class="donut-center"><span class="n" id="donutN">&ndash;</span><span class="l">events<br>today</span></div>
+                  </div>
+                  <div class="dlegend" id="donutLegend">
+                    <div class="dl text-muted">Loading...</div>
+                  </div>
+                </div>
+                <p class="text-muted small mb-0 mt-2">
+                  <span class="badge bg-secondary">Unclassified</span>
+                  Attacks the model has not seen before. These are sent for approval.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header card-header-navy">Alerts Over Time</div>
+              <div class="card-body">
+                <div style="height:220px"><canvas id="c2"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header card-header-navy d-flex justify-content-between align-items-center">
+            <span>Recent Incidents</span>
+            <button class="btn btn-sm btn-outline-primary" onclick="go('alerts')">View All</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Risk Level</th><th>Attack Type</th><th>Source IP Address</th>
+                  <th>Number of Logs</th><th>Confidence Score</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="recentBody">
+                <tr><td colspan="6" class="text-muted small text-center py-3">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== ALERTS ===== -->
+      <div class="page" id="p-alerts">
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy">Search and Filter</div>
+          <div class="card-body">
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-5">
+                <label class="form-label small mb-1">Search</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-search"></i></span>
+                  <input type="text" class="form-control" id="alertsSearch" placeholder="IP address, attack type, or incident ID" oninput="filterAlerts(this.value)">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small mb-1">IP Range</label>
+                <input type="text" class="form-control" placeholder="192.168.56.0/24">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Date Range</label>
+                <div class="input-group">
+                  <input type="date" class="form-control" value="2026-07-12">
+                  <span class="input-group-text">to</span>
+                  <input type="date" class="form-control" value="2026-07-12">
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-2 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Risk Level</label>
+                <select class="form-select">
+                  <option>All Risk Levels</option>
+                  <option>High Risk</option>
+                  <option>Uncertain</option>
+                  <option>Low Risk</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Attack Type</label>
+                <select class="form-select">
+                  <option>All Attack Types</option>
+                  <option>SQL Injection</option>
+                  <option>Cross-Site Scripting</option>
+                  <option>Command Injection</option>
+                  <option>File Inclusion</option>
+                  <option>SSH Brute Force</option>
+                  <option>Port Scanning</option>
+                  <option>Unclassified</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select class="form-select">
+                  <option>All Status</option>
+                  <option>Blocked</option>
+                  <option>Awaiting Approval</option>
+                  <option>Logged</option>
+                  <option>Dismissed</option>
+                </select>
+              </div>
+              <div class="col-md-3 d-flex gap-2">
+                <button class="btn btn-primary flex-grow-1">Apply</button>
+                <button class="btn btn-outline-secondary">Reset</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+          <div class="d-flex gap-2 flex-wrap">
+            <span class="chip active">All <b>12</b></span>
+            <span class="chip chip-hi">High <b>3</b></span>
+            <span class="chip chip-un">Uncertain <b>5</b></span>
+            <span class="chip chip-lo">Low <b>4</b></span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="small fw-bold">Rows</span>
+            <select class="form-select form-select-sm" style="width:auto">
+              <option>25</option><option>50</option><option>100</option>
+            </select>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-download"></i> Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0">
+              <thead>
+                <tr>
+                  <th style="width:36px"><input type="checkbox"></th>
+                  <th class="sortable">Risk Level <i class="bi bi-caret-down-fill"></i></th>
+                  <th class="sortable">Attack Type <i class="bi bi-arrow-down-up"></i></th>
+                  <th class="sortable">Source IP Address <i class="bi bi-arrow-down-up"></i></th>
+                  <th class="sortable">Logs <i class="bi bi-arrow-down-up"></i></th>
+                  <th class="sortable">Confidence <i class="bi bi-arrow-down-up"></i></th>
+                  <th class="sortable">First Seen <i class="bi bi-arrow-down-up"></i></th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+<tr style="cursor:pointer" onclick="openEvent('alerts','high','done')">
+                  <td><input type="checkbox"></td>
+                  <td><span class="badge bg-danger">High</span></td>
+                  <td>SQL Injection</td>
+                  <td><code>192.168.56.102</code></td>
+                  <td>312</td>
+                  <td><div class="conf-mini"><div style="width:93%;background:#ff5252"></div></div>93%</td>
+                  <td><small>2026-07-12 14:02:11</small></td>
+                  <td><span class="text-danger fw-bold">Blocked</span></td>
+                </tr><tr style="cursor:pointer" onclick="openEvent('alerts','high','done')">
+                  <td><input type="checkbox"></td>
+                  <td><span class="badge bg-danger">High</span></td>
+                  <td>Command Injection</td>
+                  <td><code>192.168.56.102</code></td>
+                  <td>44</td>
+                  <td><div class="conf-mini"><div style="width:93%;background:#ff5252"></div></div>93%</td>
+                  <td><small>2026-07-12 14:11:29</small></td>
+                  <td><span class="text-danger fw-bold">Blocked</span></td>
+                </tr><tr style="cursor:pointer" onclick="openEvent('alerts','high','done')">
+                  <td><input type="checkbox"></td>
+                  <td><span class="badge bg-danger">High</span></td>
+                  <td>SQL Injection</td>
+                  <td><code>192.168.56.107</code></td>
+                  <td>198</td>
+                  <td><div class="conf-mini"><div style="width:91%;background:#ff5252"></div></div>91%</td>
+                  <td><small>2026-07-12 13:22:47</small></td>
+                  <td><span class="text-danger fw-bold">Blocked</span></td>
+                </tr><tr style="cursor:pointer" onclick="go('approve')">
+                  <td><input type="checkbox"></td>
+                  <td><span class="badge bg-warning text-dark">Uncertain</span></td>
+                  <td>SSH Brute Force</td>
+                  <td><code>192.168.56.103</code></td>
+                  <td>58</td>
+                  <td><div class="conf-mini"><div style="width:61%;background:#ffd60a"></div></div>0.61</td>
+                  <td><small>2026-07-12 14:01:47</small></td>
+                  <td><span class="fw-bold" style="color:#8a6d00">Awaiting</span></td>
+                </tr><tr style="cursor:pointer" onclick="go('approve')">
+                  <td><input type="checkbox"></td>
+                  <td><span class="badge bg-warning text-dark">Uncertain</span></td>
+                  <td>Cross-Site Scripting</td>
+                  <td><code>192.168.56.104</code></td>
+                  <td>17</td>
+                  <td><div class="conf-mini"><div style="width:54%;background:#ffd60a"></div></div>0.54</td>
+                  <td><small>2026-07-12 13:47:02</small></td>
+                  <td><span class="fw-bold" style="color:#8a6d00">Awaiting</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body d-flex justify-content-end align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+              <span class="small fw-bold">Showing 1&ndash;5 of 12</span>
+              <nav>
+                <ul class="pagination mb-0"><li class="page-item disabled"><a class="page-link">&laquo;</a></li><li class="page-item active"><a class="page-link">1</a></li><li class="page-item"><a class="page-link">2</a></li><li class="page-item"><a class="page-link">&raquo;</a></li></ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== DETAIL ===== -->
+      <div class="page" id="p-detail">
+
+        <div class="backbar">
+          <button class="btn btn-sm btn-outline-secondary" onclick="goBack()">
+            <i class="bi bi-arrow-left"></i> Back
+          </button>
+          <span class="ms-auto" id="detailRisk"><span class="badge bg-danger">High Risk</span></span>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <h5 class="mb-0">
+                SQL Injection
+                <span class="badge bg-danger ms-2">High Risk</span>
+              </h5>
+              <button class="btn btn-outline-danger" onclick="go('reports')">
+                <i class="bi bi-file-earmark-pdf"></i> Export PDF
+              </button>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-md-2">
+                <div class="card card-blue">
+                  <div class="card-body py-2">
+                    <div class="text-muted small">Event ID</div>
+                    <div>#42</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="card card-blue">
+                  <div class="card-body py-2">
+                    <div class="text-muted small">Source IP</div>
+                    <div><code>192.168.56.102</code></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-blue">
+                  <div class="card-body py-2">
+                    <div class="text-muted small">Destination IP</div>
+                    <div><code>192.168.56.10</code></div>
+                    <div class="text-muted" style="font-size:.7rem">Target Server (DVWA)</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-blue">
+                  <div class="card-body py-2">
+                    <div class="text-muted small">Number of Logs</div>
+                    <div>312</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-blue">
+                  <div class="card-body py-2">
+                    <div class="text-muted small">Date and Time</div>
+                    <div>12 Jul 2026</div>
+                    <div class="text-muted" style="font-size:.7rem">14:02 to 14:09</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header card-header-navy">Threat Classification (XGBoost Model)</div>
+              <div class="card-body">
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <div class="card card-blue">
+                      <div class="card-body py-2">
+                        <div class="text-muted small">Result</div>
+                        <div class="text-danger fw-semibold">True Positive</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="card card-blue">
+                      <div class="card-body py-2">
+                        <div class="text-muted small">Confidence Level</div>
+                        <div class="conf-bar"><div class="conf-fill" style="width:93%;background:#ff5252"></div></div>
+                        <div class="conf-lbl">93% &nbsp;<span class="text-muted">High</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p class="text-muted small mb-0">
+                  The model classified this as a real attack because of the unusually high
+                  request rate and the suspicious characters found in the request.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header card-header-navy">Matching Attack Techniques (MITRE ATT&amp;CK)</div>
+              <div class="card-body">
+                <div class="card card-blue mb-2">
+                  <div class="card-body py-2">
+                    <div>
+                      <span class="badge bg-primary">T1190</span>
+                      <strong class="ms-1">Exploit Public-Facing Application</strong>
+                    </div>
+                    <div class="text-muted small mt-1">Tactic: Initial Access</div>
+                  </div>
+                </div>
+                <div class="card card-blue">
+                  <div class="card-body py-2">
+                    <div>
+                      <span class="badge bg-secondary">T1505.003</span>
+                      <strong class="ms-1">Web Shell</strong>
+                    </div>
+                    <div class="text-muted small mt-1">Tactic: Persistence</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy">Analysis by Language Model</div>
+          <div class="card-body">
+            <div class="card card-blue mb-3">
+              <div class="card-body">
+                <h6>What Happened</h6>
+                <p class="mb-0">The attacker sent 312 requests to the DVWA login page in about
+                   7 minutes. The requests contain SQL injection payloads targeting the users
+                   table. Many of the requests returned HTTP 500 errors, which means the
+                   injection reached the database. This is a real attack, not a scanner.</p>
+              </div>
+            </div>
+
+            <div class="card card-blue mb-3">
+              <div class="card-body">
+                <h6>What Could Go Wrong</h6>
+                <p class="mb-0">The attacker may be able to read usernames and passwords from
+                   the MySQL database, which could then be used to log into the server.</p>
+              </div>
+            </div>
+
+            <div class="card card-blue">
+              <div class="card-body">
+                <h6>What Should Be Done</h6>
+                <p class="mb-0">Block the source IP address, check the MySQL logs for any
+                   successful data extraction, and fix the input validation on the login page.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy d-flex justify-content-between align-items-center">
+            <span>Raw Logs</span>
+            <small class="text-muted">Showing 4 of 312</small>
+          </div>
+          <div class="card-body">
+<pre class="log-box">192.168.56.102 - - [12/Jul/2026:14:02:11] "GET /dvwa/vulnerabilities/sqli/?id=1' OR '1'='1" 500
+192.168.56.102 - - [12/Jul/2026:14:02:14] "GET /dvwa/vulnerabilities/sqli/?id=1 UNION SELECT user,password" 500
+192.168.56.102 - - [12/Jul/2026:14:02:18] "GET /dvwa/vulnerabilities/sqli/?id=1' AND SLEEP(5)--" 200
+192.168.56.102 - - [12/Jul/2026:14:02:23] "GET /dvwa/vulnerabilities/sqli/?id=-1' UNION SELECT 1,2--" 500</pre>
+            <a href="#" class="small mt-2 d-inline-block">Show all logs</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header card-header-navy">Response</div>
+          <div class="card-body">
+
+            <div id="actDone">
+              <div class="alert alert-danger mb-3">
+                <i class="bi bi-shield-x"></i>
+                <strong>IP Blocked.</strong> iptables rule added at 14:09:02. Email sent to analyst.
+              </div>
+              <button class="btn btn-outline-secondary btn-sm">Mark as False Positive</button>
+              <button class="btn btn-outline-secondary btn-sm">Unblock IP</button>
+            </div>
+
+            <div id="actDone2" style="display:none"></div>
+
+            <div id="actWaiting" style="display:none">
+              <div class="alert alert-navy mb-3">
+                <i class="bi bi-hourglass-split"></i>
+                <strong>Waiting for your decision.</strong> Nothing has been blocked. Your choice
+                is also sent back to the classifier so it learns from it.
+              </div>
+              <button class="btn btn-danger">Block This IP Address</button>
+              <button class="btn btn-outline-secondary">Mark as False Positive</button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== CHAIN ===== -->
+      <div class="page" id="p-chain">
+
+        <!-- STEP 1 : choose a chain -->
+        <div id="chainPick">
+          <div class="card mb-3">
+            <div class="card-header card-header-navy">Find An Attack Chain</div>
+            <div class="card-body">
+              <div class="row g-2">
+                <div class="col-md-5">
+                  <label class="form-label small mb-1">Source IP</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="chainSearch"
+                           placeholder="Search by IP or attack type" oninput="filterChains(this.value)">
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small mb-1">From</label>
+                  <input type="date" class="form-control" value="2026-01-01">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small mb-1">To</label>
+                  <input type="date" class="form-control" value="2026-07-12">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header card-header-navy">Attack Chains Found</div>
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>Chain</th><th>Source IP</th><th>Stages</th>
+                    <th>First Seen</th><th>Last Seen</th><th>Highest Risk</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="cursor:pointer" data-search="192.168.56.102 sql injection command injection port scan"
+                      onclick="openChain()">
+                    <td><strong>#C-014</strong></td>
+                    <td><code>192.168.56.102</code></td>
+                    <td>4 stages</td>
+                    <td>3 Mar 2026</td>
+                    <td>12 Jul 2026</td>
+                    <td><span class="badge bg-danger">High</span></td>
+                    <td><button class="btn btn-sm btn-primary">View Chain</button></td>
+                  </tr>
+                  <tr style="cursor:pointer" data-search="192.168.56.104 cross-site scripting directory probe"
+                      onclick="openChain()">
+                    <td><strong>#C-015</strong></td>
+                    <td><code>192.168.56.104</code></td>
+                    <td>2 stages</td>
+                    <td>28 Jun 2026</td>
+                    <td>12 Jul 2026</td>
+                    <td><span class="badge bg-warning">Uncertain</span></td>
+                    <td><button class="btn btn-sm btn-primary">View Chain</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2 : the chain itself -->
+        <div id="chainView" style="display:none">
+          <div class="backbar">
+            <button class="btn btn-sm btn-outline-secondary" onclick="closeChain()">
+              <i class="bi bi-arrow-left"></i> Back
+            </button>
+            <span class="ms-auto"><span class="badge bg-danger">High Risk</span></span>
+          </div>
+
+          <div class="alert alert-danger">
+            <i class="bi bi-diagram-3"></i>
+            <strong>Chain #C-014</strong> from <code>192.168.56.102</code>, 4 stages between 3 Mar 2026 and 12 Jul 2026.
+          </div>
+
+<div class="card mb-3">
+          <div class="card-header card-header-navy">Attack Chain</div>
+          <div class="card-body">
+            <div class="text-center mt-3">
+              <svg viewBox="0 0 780 250" style="width:100%;max-width:820px">
+                <!-- edges -->
+                <path class="cedge" d="M 112 138 Q 160 78 203 82"/>
+                <path class="cedge" d="M 268 92 Q 320 145 358 148"/>
+                <path class="cedge" d="M 423 143 Q 470 80 513 82"/>
+                <path class="cedge pred" d="M 578 92 Q 630 140 668 143"/>
+                <!-- 1 Port Scanning -->
+                <g>
+                  <circle cx="80" cy="150" r="42" fill="#06d6a0" opacity=".35"/>
+                  <circle cx="80" cy="150" r="30" fill="#b2f2e5" stroke="#1a1a1a" stroke-width="4"/>
+                  <text x="80" y="148" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">3 Mar</text>
+                  <text x="80" y="162" text-anchor="middle" font-size="10" font-weight="700" fill="#5a5040">09:14</text>
+                  <text x="80" y="94" text-anchor="middle" font-size="13" font-weight="800" fill="#1a1a1a">Port Scanning</text>
+                  <rect x="24" y="200" width="112" height="21" rx="5" fill="#0d2c50" stroke="#1a1a1a" stroke-width="2.5" transform="rotate(-1.5 80 210)"/>
+                  <text x="80" y="215" text-anchor="middle" font-size="9.5" font-weight="800" fill="#ffd60a" transform="rotate(-1.5 80 210)">RECONNAISSANCE</text>
+                </g>
+                <!-- 2 SSH Brute Force -->
+                <g>
+                  <circle cx="235" cy="88" r="42" fill="#ffd60a" opacity=".4"/>
+                  <circle cx="235" cy="88" r="30" fill="#fff3b0" stroke="#1a1a1a" stroke-width="4"/>
+                  <text x="235" y="86" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">19 Apr</text>
+                  <text x="235" y="100" text-anchor="middle" font-size="10" font-weight="700" fill="#5a5040">02:47</text>
+                  <text x="235" y="32" text-anchor="middle" font-size="13" font-weight="800" fill="#1a1a1a">SSH Brute Force</text>
+                  <rect x="170" y="132" width="130" height="21" rx="5" fill="#0d2c50" stroke="#1a1a1a" stroke-width="2.5" transform="rotate(1.5 235 142)"/>
+                  <text x="235" y="147" text-anchor="middle" font-size="9.5" font-weight="800" fill="#ffd60a" transform="rotate(1.5 235 142)">CREDENTIAL ACCESS</text>
+                </g>
+                <!-- 3 SQL Injection (hot) -->
+                <g>
+                  <circle cx="390" cy="155" r="44" fill="#ff5252" opacity=".4" style="animation:haloPulse 1.5s infinite"/>
+                  <circle cx="390" cy="155" r="30" fill="#ffc9c9" stroke="#1a1a1a" stroke-width="4"/>
+                  <text x="390" y="153" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">28 Jun</text>
+                  <text x="390" y="167" text-anchor="middle" font-size="10" font-weight="700" fill="#5a5040">23:08</text>
+                  <text x="390" y="99" text-anchor="middle" font-size="13" font-weight="800" fill="#c92a2a">SQL Injection</text>
+                  <rect x="335" y="205" width="110" height="21" rx="5" fill="#ff5252" stroke="#1a1a1a" stroke-width="2.5" transform="rotate(-1.5 390 215)"/>
+                  <text x="390" y="220" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff" transform="rotate(-1.5 390 215)">INITIAL ACCESS</text>
+                </g>
+                <!-- 4 Command Injection (hot) -->
+                <g>
+                  <circle cx="545" cy="88" r="44" fill="#ff5252" opacity=".4" style="animation:haloPulse 1.5s infinite .4s"/>
+                  <circle cx="545" cy="88" r="30" fill="#ffc9c9" stroke="#1a1a1a" stroke-width="4"/>
+                  <text x="545" y="86" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">12 Jul</text>
+                  <text x="545" y="100" text-anchor="middle" font-size="10" font-weight="700" fill="#5a5040">14:02</text>
+                  <text x="545" y="32" text-anchor="middle" font-size="13" font-weight="800" fill="#c92a2a">Command Injection</text>
+                  <rect x="497" y="132" width="96" height="21" rx="5" fill="#ff5252" stroke="#1a1a1a" stroke-width="2.5" transform="rotate(1.5 545 142)"/>
+                  <text x="545" y="147" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff" transform="rotate(1.5 545 142)">EXECUTION</text>
+                </g>
+                <!-- 5 Web Shell (predicted) -->
+                <g>
+                  <circle cx="700" cy="150" r="30" fill="#fff" stroke="#a09070" stroke-width="3" stroke-dasharray="6 5"/>
+                  <text x="700" y="153" text-anchor="middle" font-size="12" font-weight="800" fill="#8a8070">next?</text>
+                  <text x="700" y="167" text-anchor="middle" font-size="10" font-weight="700" fill="#a09070">unknown</text>
+                  <text x="700" y="94" text-anchor="middle" font-size="13" font-weight="800" fill="#8a8070">Web Shell</text>
+                  <rect x="646" y="200" width="108" height="21" rx="5" fill="#e8e0cb" stroke="#a09070" stroke-width="2.5" transform="rotate(-1.5 700 210)"/>
+                  <text x="700" y="215" text-anchor="middle" font-size="9.5" font-weight="800" fill="#5a5040" transform="rotate(-1.5 700 210)">PREDICTED NEXT</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy">Timeline</div>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0">
+              <thead>
+                <tr><th>Date</th><th>Time</th><th>Attack Stage</th><th>Attack Type</th><th>MITRE Technique</th><th>Number of Logs</th><th>Risk Level</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><small>2026-03-03</small></td><td><small>09:14:22</small></td>
+                  <td>Reconnaissance</td><td>Port Scanning</td><td>T1046</td><td>1024</td>
+                  <td><span class="badge bg-success">Low</span></td>
+                </tr>
+                <tr>
+                  <td><small>2026-04-19</small></td><td><small>02:47:05</small></td>
+                  <td>Credential Access</td><td>SSH Brute Force</td><td>T1110</td><td>58</td>
+                  <td><span class="badge bg-warning text-dark">Uncertain</span></td>
+                </tr>
+                <tr>
+                  <td><small>2026-06-28</small></td><td><small>23:08:41</small></td>
+                  <td>Initial Access</td><td>SQL Injection</td><td>T1190</td><td>312</td>
+                  <td><span class="badge bg-danger">High</span></td>
+                </tr>
+                <tr>
+                  <td><small>2026-07-12</small></td><td><small>14:02:11</small></td>
+                  <td>Execution</td><td>Command Injection</td><td>T1059</td><td>44</td>
+                  <td><span class="badge bg-danger">High</span></td>
+                </tr>
+                <tr>
+                  <td><small>2026-07-12 14:12:40</small></td>
+                  <td>Persistence</td><td>Web Shell</td><td>T1505.003</td><td>6</td>
+                  <td><span class="badge bg-warning text-dark">Uncertain</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      
+        </div>
+
+      </div>
+
+      <!-- ===== APPROVALS ===== -->
+      <div class="page" id="p-approve">
+
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center" style="background:#0d2c50;color:#ffd60a">
+            <span>Events Waiting For Your Decision</span>
+            <span class="fs-4 fw-bold">5</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th><th>Time</th><th>Risk</th><th>Attack Type</th><th>Source IP</th><th>Destination</th>
+                  <th>Logs</th><th>Confidence</th><th>Waiting</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="cursor:pointer" onclick="openEvent('approve','uncertain','waiting')">
+                  <td>12 Jul 2026</td><td>14:01</td><td><span class="badge bg-warning">Uncertain</span></td>
+                  <td>SSH Brute Force</td><td><code>192.168.56.103</code></td><td><code>192.168.56.10</code></td>
+                  <td>58</td>
+                  <td><span class="conf-mini"><div style="width:61%;background:#ffd60a"></div></span>61%</td>
+                  <td>8 min</td>
+                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
+                </tr>
+                <tr style="cursor:pointer" onclick="openEvent('approve','uncertain','waiting')">
+                  <td>12 Jul 2026</td><td>13:55</td><td><span class="badge bg-warning">Uncertain</span></td>
+                  <td>Cross-Site Scripting</td><td><code>192.168.56.104</code></td><td><code>192.168.56.10</code></td>
+                  <td>21</td>
+                  <td><span class="conf-mini"><div style="width:54%;background:#ffd60a"></div></span>54%</td>
+                  <td>14 min</td>
+                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
+                </tr>
+                <tr style="cursor:pointer" onclick="openEvent('approve','unclassified','waiting')">
+                  <td>12 Jul 2026</td><td>13:47</td><td><span class="badge bg-secondary">Unclassified</span></td>
+                  <td>Unknown pattern</td><td><code>192.168.56.108</code></td><td><code>192.168.56.10</code></td>
+                  <td>12</td>
+                  <td><span class="conf-mini"><div style="width:47%;background:#ffd60a"></div></span>47%</td>
+                  <td>22 min</td>
+                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
+                </tr>
+                <tr style="cursor:pointer" onclick="openEvent('approve','uncertain','waiting')">
+                  <td>12 Jul 2026</td><td>13:38</td><td><span class="badge bg-warning">Uncertain</span></td>
+                  <td>File Inclusion</td><td><code>192.168.56.111</code></td><td><code>192.168.56.10</code></td>
+                  <td>9</td>
+                  <td><span class="conf-mini"><div style="width:58%;background:#ffd60a"></div></span>58%</td>
+                  <td>31 min</td>
+                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
+                </tr>
+                <tr style="cursor:pointer" onclick="openEvent('approve','unclassified','waiting')">
+                  <td>12 Jul 2026</td><td>13:24</td><td><span class="badge bg-secondary">Unclassified</span></td>
+                  <td>Unknown pattern</td><td><code>192.168.56.118</code></td><td><code>192.168.56.10</code></td>
+                  <td>6</td>
+                  <td><span class="conf-mini"><div style="width:44%;background:#ffd60a"></div></span>44%</td>
+                  <td>45 min</td>
+                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-body py-2 d-flex align-items-center gap-3 flex-wrap">
+            <span class="small fw-bold">Confidence follows the same thresholds as risk</span>
+            <span class="small"><span class="conf-key" style="background:#06d6a0"></span>0% to 40% &middot; Low</span>
+            <span class="small"><span class="conf-key" style="background:#ffd60a"></span>41% to 84% &middot; Uncertain</span>
+            <span class="small"><span class="conf-key" style="background:#ff5252"></span>85% to 100% &middot; High</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== BLOCKED ===== -->
+      <div class="page" id="p-blocked">
+
+        <div class="row mb-3 g-2">
+          <div class="col-md-5">
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control" placeholder="Search IP address...">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-primary w-100">Add Block</button>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0">
+              <thead>
+                <tr><th>Source IP Address</th><th>Reason</th><th>Blocked By</th><th>Time</th><th>Status</th><th>Action</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>192.168.56.102</code></td>
+                  <td>SQL Injection</td><td>Auto</td><td>14:09</td>
+                  <td><span class="badge bg-danger">Active</span></td>
+                  <td><button class="btn btn-sm btn-outline-secondary">Unblock</button></td>
+                </tr>
+                <tr>
+                  <td><code>192.168.56.107</code></td>
+                  <td>Command Injection</td><td>Auto</td><td>13:22</td>
+                  <td><span class="badge bg-danger">Active</span></td>
+                  <td><button class="btn btn-sm btn-outline-secondary">Unblock</button></td>
+                </tr>
+                <tr>
+                  <td><code>192.168.56.109</code></td>
+                  <td>SSH Brute Force</td><td>Analyst</td><td>11:48</td>
+                  <td><span class="badge bg-danger">Active</span></td>
+                  <td><button class="btn btn-sm btn-outline-secondary">Unblock</button></td>
+                </tr>
+                <tr class="text-muted">
+                  <td><code>192.168.56.115</code></td>
+                  <td>Cross-Site Scripting (false positive)</td><td>Auto</td><td>09:14</td>
+                  <td><span class="badge bg-secondary">Unblocked</span></td>
+                  <td>-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header card-header-navy">Active Firewall Blocks</div>
+          <div class="card-body">
+            <p class="text-muted small">
+              These rules are active on the firewall. Any traffic coming from these
+              IP addresses is dropped before it reaches the server.
+            </p>
+            <table class="table table-sm table-bordered mb-3">
+              <thead>
+                <tr>
+                  <th>Source IP Address</th>
+                  <th>Action</th>
+                  <th>Traffic Type</th>
+                  <th>Destination</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>192.168.56.102</code></td>
+                  <td><span class="badge bg-danger">Block</span></td>
+                  <td>All traffic</td><td>Any destination</td>
+                </tr>
+                <tr>
+                  <td><code>192.168.56.107</code></td>
+                  <td><span class="badge bg-danger">Block</span></td>
+                  <td>All traffic</td><td>Any destination</td>
+                </tr>
+                <tr>
+                  <td><code>192.168.56.109</code></td>
+                  <td><span class="badge bg-danger">Block</span></td>
+                  <td>All traffic</td><td>Any destination</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
+                    data-bs-target="#rawIpt">
+              <i class="bi bi-terminal"></i> View raw command output
+            </button>
+            <div class="collapse mt-3" id="rawIpt">
+<pre class="log-box">$ sudo iptables -L INPUT -n
+
+Chain INPUT (policy ACCEPT)
+target  prot  source           destination
+DROP    all   192.168.56.102   0.0.0.0/0
+DROP    all   192.168.56.107   0.0.0.0/0
+DROP    all   192.168.56.109   0.0.0.0/0
+</pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== REPORTS ===== -->
+      <div class="page" id="p-reports">
+
+        <div class="row mb-3 g-2">
+          <div class="col-md-5">
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control" placeholder="Search reports..." oninput="filterReports(this.value)">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-primary w-100">
+              <i class="bi bi-file-earmark-pdf"></i> Generate Report
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4" id="reportGrid">
+          <div class="col-md-4">
+            <div class="rcard" data-search="incident report #42 sql injection 192.168.56.102 high">
+              <div class="rico" style="background:#ffc9c9">&#128299;</div>
+              <div style="min-width:0;flex:1">
+                <div class="rt">Incident Report #42</div>
+                <div class="rs">SQL Injection &middot; <code>192.168.56.102</code><br>blocked automatically at 14:09</div>
+                <div class="rfoot">
+                  <span class="tagm" style="background:#ff5252;color:#fff">HIGH</span>
+                  <span class="tagm" style="background:#fff">12 Jul &middot; 412 KB</span>
+                  <button class="btn btn-sm btn-outline-primary ms-auto py-0 px-2"><i class="bi bi-download"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="rcard" data-search="incident report #39 command injection 192.168.56.107 high">
+              <div class="rico" style="background:#ffe3c4">&#9889;</div>
+              <div style="min-width:0;flex:1">
+                <div class="rt">Incident Report #39</div>
+                <div class="rs">Command Injection &middot; <code>192.168.56.107</code><br>blocked automatically at 13:22</div>
+                <div class="rfoot">
+                  <span class="tagm" style="background:#ff5252;color:#fff">HIGH</span>
+                  <span class="tagm" style="background:#fff">11 Jul &middot; 308 KB</span>
+                  <button class="btn btn-sm btn-outline-primary ms-auto py-0 px-2"><i class="bi bi-download"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="rcard" data-search="incident report #37 ssh brute force 192.168.56.109 approved analyst">
+              <div class="rico" style="background:#fff3b0">&#128296;</div>
+              <div style="min-width:0;flex:1">
+                <div class="rt">Incident Report #37</div>
+                <div class="rs">SSH Brute Force &middot; <code>192.168.56.109</code><br>blocked after analyst approval</div>
+                <div class="rfoot">
+                  <span class="tagm" style="background:#ffd60a">APPROVED</span>
+                  <span class="tagm" style="background:#fff">11 Jul &middot; 227 KB</span>
+                  <button class="btn btn-sm btn-outline-primary ms-auto py-0 px-2"><i class="bi bi-download"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="text-muted mb-3">PDF Preview</h6>
+        <div class="card">
+          <div class="card-body pdf-stage">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <code style="color:#fff;font-weight:700">CyREN_Incident_42_2026-07-12.pdf</code>
+              <div>
+                <span class="btn btn-sm btn-light disabled">Page 1 of 3</span>
+                <button class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-download"></i> Download
+                </button>
+              </div>
+            </div>
+            <div class="bg-white p-4 mx-auto" style="max-width:600px;border:3px solid #1a1a1a;border-radius:6px">
+              <div class="border-bottom border-2 border-dark pb-2 mb-3 d-flex justify-content-between align-items-end">
+                <div>
+                  <h5 class="mb-0">Incident Response Report</h5>
+                  <small class="text-muted">CyREN</small>
+                </div>
+                <div class="text-end">
+                  <div><strong>Incident #42</strong></div>
+                  <small class="text-muted">12 July 2026</small>
+                </div>
+              </div>
+
+              <div class="alert alert-danger py-2 mb-3">
+                <strong>High Risk.</strong> IP has been blocked
+              </div>
+
+              <h6 class="mt-3">1. Summary</h6>
+              <table class="table table-sm table-borderless mb-3">
+                <tr><td class="text-muted" style="width:140px">Attack Type</td><td>SQL Injection</td></tr>
+                <tr><td class="text-muted">Source IP</td><td><code>192.168.56.102</code></td></tr>
+                <tr><td class="text-muted">Target</td><td>Target Server (DVWA)</td></tr>
+                <tr><td class="text-muted">Time</td><td>14:02:11 - 14:09:02</td></tr>
+                <tr><td class="text-muted">Logs</td><td>312</td></tr>
+              </table>
+
+              <h6>2. Classification</h6>
+              <table class="table table-sm table-bordered mb-3">
+                <thead>
+                  <tr><th>Model</th><th>Result</th><th>Confidence Score</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>XGBoost</td><td class="text-danger">True Positive</td><td>93%</td></tr>
+                </tbody>
+              </table>
+
+              <h6>3. Analysis</h6>
+              <p class="small">The attacker sent 312 requests to the DVWA login page in about
+                 7 minutes with SQL injection payloads. Many requests returned HTTP 500,
+                 which means the injection reached the database.</p>
+
+              <table class="table table-sm table-bordered mb-3">
+                <thead>
+                  <tr><th>MITRE ID</th><th>Technique</th><th>Tactic</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>T1190</td><td>Exploit Public-Facing Application</td><td>Initial Access</td></tr>
+                  <tr><td>T1505.003</td><td>Web Shell</td><td>Persistence</td></tr>
+                </tbody>
+              </table>
+
+              <h6>4. Action Taken</h6>
+              <table class="table table-sm table-bordered mb-0">
+                <thead>
+                  <tr><th>Time</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>14:09:02</td><td>iptables DROP rule added for source IP</td></tr>
+                  <tr><td>14:09:04</td><td>Email notification sent</td></tr>
+                </tbody>
+              </table>
+
+              <div class="border-top mt-3 pt-2 d-flex justify-content-between text-muted small">
+                <span>Generated by CyREN</span>
+                <span>Page 1 of 3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== SETTINGS ===== -->
+      <div class="page" id="p-users">
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy d-flex justify-content-between align-items-center">
+            <span>Analyst Accounts</span>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+              <i class="bi bi-person-plus"></i> Add User
+            </button>
+          </div>
+          <div class="card-body pb-2">
+            <div class="input-group mb-3" style="max-width:340px">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control" placeholder="Search by name or username" oninput="filterUsers(this.value)">
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0">
+              <thead>
+                <tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                <tr data-search="chong mei san analyst01">
+                  <td>Chong Mei San</td><td><code>analyst01</code></td>
+                  <td><span class="badge bg-secondary">SOC Analyst</span></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>12 Jul 2026 09:02</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger">Disable</button>
+                  </td>
+                </tr>
+                <tr data-search="tan wei jie analyst02">
+                  <td>Tan Wei Jie</td><td><code>analyst02</code></td>
+                  <td><span class="badge bg-secondary">SOC Analyst</span></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>12 Jul 2026 08:41</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger">Disable</button>
+                  </td>
+                </tr>
+                <tr data-search="lim hui ying manager01 manager">
+                  <td>Lim Hui Ying</td><td><code>manager01</code></td>
+                  <td><span class="badge" style="background:#0d2c50;color:#ffd60a">SOC Manager</span></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>12 Jul 2026 07:55</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger">Disable</button>
+                  </td>
+                </tr>
+                <tr class="text-muted" data-search="raj kumar analyst03 disabled">
+                  <td>Raj Kumar</td><td><code>analyst03</code></td>
+                  <td><span class="badge bg-secondary">SOC Analyst</span></td>
+                  <td><span class="badge bg-secondary">Disabled</span></td>
+                  <td>28 Jun 2026 14:10</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">Edit</button>
+                    <button class="btn btn-sm btn-outline-success">Enable</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header card-header-navy">Roles And Permissions</div>
+          <div class="card-body pt-3">
+            <p class="small text-muted">
+              A role decides what each account is allowed to do. Analysts work the queue; managers
+              can also change thresholds and manage users.
+            </p>
+            <div class="table-responsive">
+              <table class="table table-bordered mb-0">
+                <thead>
+                  <tr><th>Permission</th><th class="text-center">SOC Analyst</th><th class="text-center">SOC Manager</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>View events and attack chains</td><td class="text-center">&#10004;</td><td class="text-center">&#10004;</td></tr>
+                  <tr><td>Approve or dismiss uncertain events</td><td class="text-center">&#10004;</td><td class="text-center">&#10004;</td></tr>
+                  <tr><td>Block or unblock IP addresses</td><td class="text-center">&#10004;</td><td class="text-center">&#10004;</td></tr>
+                  <tr><td>Change risk thresholds</td><td class="text-center text-muted">&#10007;</td><td class="text-center">&#10004;</td></tr>
+                  <tr><td>Retrain the model</td><td class="text-center text-muted">&#10007;</td><td class="text-center">&#10004;</td></tr>
+                  <tr><td>Manage user accounts</td><td class="text-center text-muted">&#10007;</td><td class="text-center">&#10004;</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="page" id="p-settings">
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy d-flex justify-content-between align-items-center">
+            <span>Risk Thresholds</span>
+            <span class="badge bg-warning text-dark">
+              <i class="bi bi-lock-fill"></i> Manager only
+            </span>
+          </div>
+          <div class="card-body">
+            <p class="text-muted small">
+              The system decides what to do with an alert based on the confidence score
+              from the classifier. Changing these values affects what gets blocked
+              automatically, so you need to confirm your identity first.
+            </p>
+
+            <div id="thrLocked">
+              <div class="thr-band mb-4">
+                <div class="seg" style="width:40%;background:#06d6a0"><b>LOW</b><span>0% to 40%</span><small>log only</small></div>
+                <div class="seg" style="width:44%;background:#ffd60a"><b>UNCERTAIN</b><span>41% to 84%</span><small>ask the analyst</small></div>
+                <div class="seg" style="width:16%;background:#ff5252;color:#fff"><b>HIGH</b><span>85% to 100%</span><small>block now</small></div>
+              </div>
+
+              <div class="thr-row is-locked">
+                <div class="thr-lbl">
+                  <div class="t"><span class="badge bg-danger">HIGH</span> risk threshold</div>
+                  <div class="d">Confidence at or above this is blocked straight away.</div>
+                </div>
+                <input type="range" class="thr-slider" min="50" max="100" step="1" value="85" disabled>
+                <div class="input-group thr-num">
+                  <input type="number" class="form-control" value="85" disabled>
+                  <span class="input-group-text">%</span>
+                </div>
+              </div>
+
+              <div class="thr-row is-locked">
+                <div class="thr-lbl">
+                  <div class="t"><span class="badge bg-success">LOW</span> risk threshold</div>
+                  <div class="d">Confidence at or below this is only logged.</div>
+                </div>
+                <input type="range" class="thr-slider" min="0" max="60" step="1" value="40" disabled>
+                <div class="input-group thr-num">
+                  <input type="number" class="form-control" value="40" disabled>
+                  <span class="input-group-text">%</span>
+                </div>
+              </div>
+
+              <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#verifyModal">
+                <i class="bi bi-unlock"></i> Unlock to Change
+              </button>
+            </div>
+
+            <div id="thrUnlocked" style="display:none">
+              <div class="alert alert-success py-2">
+                <i class="bi bi-unlock-fill"></i> Identity confirmed. You can now change the thresholds.
+              </div>
+
+              <div class="thr-band mb-4" id="thrBandLive">
+                <div class="seg" id="segLow"  style="width:40%;background:#06d6a0"><b>LOW</b><span id="segLowTxt">0% to 40%</span><small>log only</small></div>
+                <div class="seg" id="segUnc"  style="width:44%;background:#ffd60a"><b>UNCERTAIN</b><span id="segUncTxt">41% to 84%</span><small>ask the analyst</small></div>
+                <div class="seg" id="segHigh" style="width:16%;background:#ff5252;color:#fff"><b>HIGH</b><span id="segHighTxt">85% to 100%</span><small>block now</small></div>
+              </div>
+
+              <div class="thr-row">
+                <div class="thr-lbl">
+                  <div class="t"><span class="badge bg-danger">HIGH</span> risk threshold</div>
+                  <div class="d">Confidence at or above this is blocked straight away.</div>
+                </div>
+                <input type="range" class="thr-slider" min="50" max="100" step="1" value="85"
+                       id="hiRange" oninput="syncThr('hi',this.value)">
+                <div class="input-group thr-num">
+                  <input type="number" class="form-control" min="50" max="100" value="85"
+                         id="hiNum" oninput="syncThr('hi',this.value)">
+                  <span class="input-group-text">%</span>
+                </div>
+              </div>
+
+              <div class="thr-row">
+                <div class="thr-lbl">
+                  <div class="t"><span class="badge bg-success">LOW</span> risk threshold</div>
+                  <div class="d">Confidence at or below this is only logged.</div>
+                </div>
+                <input type="range" class="thr-slider" min="0" max="60" step="1" value="40"
+                       id="loRange" oninput="syncThr('lo',this.value)">
+                <div class="input-group thr-num">
+                  <input type="number" class="form-control" min="0" max="60" value="40"
+                         id="loNum" oninput="syncThr('lo',this.value)">
+                  <span class="input-group-text">%</span>
+                </div>
+              </div>
+
+              <button class="btn btn-primary" onclick="lockThr()">Save Thresholds</button>
+              <button class="btn btn-outline-secondary" onclick="lockThr()">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy">Email Notifications</div>
+          <div class="card-body">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" checked>
+              <label class="form-check-label">Send email when a high-risk IP is blocked</label>
+            </div>
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" checked>
+              <label class="form-check-label">Send email when an alert needs approval</label>
+            </div>
+            <label class="form-label">Email address</label>
+            <input type="email" class="form-control" value="soc-team@company.com">
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy">Machine Learning Model</div>
+          <div class="card-body">
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-3">
+                <div class="card card-blue"><div class="card-body py-2">
+                  <div class="text-muted small">Model</div><div>XGBoost</div>
+                </div></div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-blue"><div class="card-body py-2">
+                  <div class="text-muted small">Last Trained</div><div>2026-07-10</div>
+                </div></div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-blue"><div class="card-body py-2">
+                  <div class="text-muted small">Accuracy</div><div>94% out of 1.00</div>
+                </div></div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-blue"><div class="card-body py-2">
+                  <div class="text-muted small">New Decisions</div><div>28 waiting</div>
+                </div></div>
+              </div>
+            </div>
+
+            <h6 class="mt-3">Automatic Retraining</h6>
+            <div class="row g-2 mb-3 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small">Schedule</label>
+                <select class="form-select" id="retrainSched">
+                  <option>Never (manual only)</option>
+                  <option selected>Every week</option>
+                  <option>Every month</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">Day</label>
+                <select class="form-select">
+                  <option selected>Sunday</option><option>Monday</option>
+                  <option>Tuesday</option><option>Wednesday</option>
+                  <option>Thursday</option><option>Friday</option><option>Saturday</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">Time</label>
+                <input type="time" class="form-control" value="02:00">
+              </div>
+              <div class="col-md-2">
+                <button class="btn btn-outline-primary w-100">Save</button>
+              </div>
+            </div>
+            <p class="text-muted small">
+              Next scheduled retraining: Sunday 19 July 2026 at 02:00
+            </p>
+
+            <hr>
+
+            <h6>Manual Retraining</h6>
+            <p class="text-muted small">
+              Run the training now instead of waiting for the schedule.
+            </p>
+            <button class="btn btn-primary">
+              <i class="bi bi-arrow-repeat"></i> Retrain Model Now
+            </button>
+            <button class="btn btn-outline-secondary">View Training History</button>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy">Agent Switches</div>
+          <div class="card-body pt-2">
+            <div class="set-line">
+              <div><div class="t">Knowledge retrieval (GraphRAG)</div>
+                <div class="d">Look up MITRE ATT&amp;CK before the model explains an alert.</div></div>
+              <label class="cswitch"><input type="checkbox" checked><span class="tr"></span></label>
+            </div>
+            <div class="set-line">
+              <div><div class="t">Keyword fallback (TF-IDF)</div>
+                <div class="d">Used automatically if graph retrieval is not available.</div></div>
+              <label class="cswitch"><input type="checkbox" checked><span class="tr"></span></label>
+            </div>
+            <div class="set-line">
+              <div><div class="t">Auto-block high risk IPs</div>
+                <div class="d">Adds an iptables rule without waiting for approval.</div></div>
+              <label class="cswitch"><input type="checkbox" checked><span class="tr"></span></label>
+            </div>
+            <div class="set-line">
+              <div><div class="t">Email notifications</div>
+                <div class="d">Send an email for every high risk incident.</div></div>
+              <label class="cswitch"><input type="checkbox" checked><span class="tr"></span></label>
+            </div>
+            <div class="set-line">
+              <div><div class="t">PDF report for every incident</div>
+                <div class="d">Generated automatically for record keeping.</div></div>
+              <label class="cswitch"><input type="checkbox" checked><span class="tr"></span></label>
+            </div>
+            <div class="set-line">
+              <div><div class="t">Notify me when a high risk alert appears</div>
+                <div class="d">Buddy pops up with the IP address and the attack type.</div></div>
+              <label class="cswitch"><input type="checkbox" checked id="setRoam"><span class="tr"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header card-header-navy">System Status</div>
+          <div class="card-body">
+            <table class="table table-sm table-bordered mb-0">
+              <tr>
+                <td>Elasticsearch</td>
+                <td><code class="small">localhost:9200</code></td>
+                <td class="text-end"><span class="badge bg-success">Connected</span></td>
+              </tr>
+              <tr>
+                <td>Groq API (Llama 4 Scout)</td>
+                <td><code class="small">api.groq.com</code></td>
+                <td class="text-end"><span class="badge bg-success">Connected</span></td>
+              </tr>
+              <tr>
+                <td>ChromaDB</td>
+                <td><code class="small">MITRE ATT&amp;CK</code></td>
+                <td class="text-end"><span class="badge bg-success">Connected</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== PROFILE ===== -->
+      <div class="page" id="p-profile">
+
+        <div class="row g-3">
+          <div class="col-md-6">
+
+            <div class="card mb-3 h-row-a">
+              <div class="card-header card-header-navy">Account Details</div>
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
+                       style="width:56px;height:56px;font-size:1.2rem">CM</div>
+                  <div>
+                    <h6 class="mb-0">Chong Mei San</h6>
+                    <small class="text-muted">SOC Analyst</small>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Full Name</label>
+                  <input type="text" class="form-control" value="Chong Mei San">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Email Address</label>
+                  <input type="email" class="form-control" value="analyst@company.com">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Username</label>
+                  <input type="text" class="form-control" value="analyst01" disabled>
+                  <div style="font-size:0.75rem;color:#9aa0a6;margin-top:4px">Username cannot be changed</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Role</label>
+                  <input type="text" class="form-control" value="SOC Analyst" disabled>
+                  <div style="font-size:0.75rem;color:#9aa0a6;margin-top:4px">Contact a manager to change your role</div>
+                </div>
+                <button class="btn btn-primary">Save Changes</button>
+              </div>
+            </div>
+
+            <div class="card h-row-b">
+              <div class="card-header card-header-navy">Change Password</div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label class="form-label">Current Password</label>
+                  <input type="password" class="form-control" value="password123">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">New Password</label>
+                  <input type="password" class="form-control">
+                  <div style="font-size:0.75rem;color:#9aa0a6;margin-top:4px">Minimum 12 characters, one uppercase, one lowercase, one number, one special character</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Confirm New Password</label>
+                  <input type="password" class="form-control">
+                </div>
+                <button class="btn btn-primary">Update Password</button>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="col-md-6">
+
+            <div class="card mb-3 h-row-a">
+              <div class="card-header card-header-navy">Your Activity</div>
+              <div class="card-body">
+                <div class="row g-2 mb-3">
+                  <div class="col-4">
+                    <div class="card card-blue text-center"><div class="card-body py-2">
+                      <div class="fs-4">19</div>
+                      <div class="text-muted small">Approved</div>
+                    </div></div>
+                  </div>
+                  <div class="col-4">
+                    <div class="card card-blue text-center"><div class="card-body py-2">
+                      <div class="fs-4">9</div>
+                      <div class="text-muted small">Dismissed</div>
+                    </div></div>
+                  </div>
+                  <div class="col-4">
+                    <div class="card card-blue text-center"><div class="card-body py-2">
+                      <div class="fs-4">2</div>
+                      <div class="text-muted small">Reverted</div>
+                    </div></div>
+                  </div>
+                </div>
+
+                <h6>Recent Decisions</h6>
+                <table class="table table-sm table-bordered mb-0">
+                  <thead>
+                    <tr><th>Time</th><th>Decision</th><th>Result</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><small>13:56</small></td>
+                      <td>Unblocked 192.168.56.115</td>
+                      <td><span class="badge bg-success">False Positive</span></td>
+                    </tr>
+                    <tr>
+                      <td><small>13:55</small></td>
+                      <td>Dismissed Incident #28</td>
+                      <td><span class="badge bg-success">False Positive</span></td>
+                    </tr>
+                    <tr>
+                      <td><small>11:48</small></td>
+                      <td>Blocked 192.168.56.109</td>
+                      <td><span class="badge bg-danger">Real Threat</span></td>
+                    </tr>
+                    <tr>
+                      <td><small>10:31</small></td>
+                      <td>Blocked 192.168.56.107</td>
+                      <td><span class="badge bg-danger">Real Threat</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card h-row-b">
+              <div class="card-header card-header-navy">Login History</div>
+              <div class="card-body">
+                <table class="table table-sm table-bordered mb-0">
+                  <thead>
+                    <tr><th>Date and Time</th><th>IP Address</th><th>Result</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><small>2026-07-12 09:02</small></td>
+                      <td><code>10.0.2.15</code></td>
+                      <td><span class="badge bg-success">Success</span></td>
+                    </tr>
+                    <tr>
+                      <td><small>2026-07-11 08:47</small></td>
+                      <td><code>10.0.2.15</code></td>
+                      <td><span class="badge bg-success">Success</span></td>
+                    </tr>
+                    <tr>
+                      <td><small>2026-07-10 14:20</small></td>
+                      <td><code>10.0.2.19</code></td>
+                      <td><span class="badge bg-danger">Wrong password</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      
+
+      
+    </main>
+  </div>
+</div>
+
+
+<div class="modal fade" id="verifyModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-shield-lock"></i> Confirm Your Identity</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">
+          Changing the risk thresholds affects which attacks are blocked automatically.
+          Enter your password to confirm it is you.
+        </p>
+        <div class="mb-3">
+          <label class="form-label">Signed in as</label>
+          <input type="text" class="form-control" value="analyst01" disabled>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" value="password123">
+        </div>
+        <div class="alert alert-warning py-2 mb-0 small">
+          <i class="bi bi-exclamation-triangle"></i>
+          Only SOC managers can change these settings. This action is written to the log.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" data-bs-dismiss="modal" onclick="unlockThr()">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  function go(p) {
+    document.querySelectorAll('.page').forEach(function(e){ e.classList.remove('active'); });
+    document.getElementById('p-' + p).classList.add('active');
+    document.querySelectorAll('.sidebar .nav-link').forEach(function(a){
+      a.classList.toggle('active', a.dataset.p === p);
+    });
+    var c = document.querySelector('.content'); if (c) c.scrollTop = 0;
+  }
+
+  document.querySelectorAll('.sidebar .nav-link').forEach(function(a){
+    a.onclick = function(){ go(a.dataset.p); };
+  });
+
+  var _dashTimer = null;
+  function startDashRefresh() {
+    if (_dashTimer) clearInterval(_dashTimer);
+    _dashTimer = setInterval(loadDashboard, 30000);
+  }
+
+  async function login() {
+    var u = document.getElementById('loginUser').value.trim();
+    var p = document.getElementById('loginPw').value;
+    var res;
+    try {
+      res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+    } catch (e) {
+      alert('Cannot reach the CyREN server. Is it running?');
+      return false;
+    }
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok || !data.ok) {
+      alert(data.error || 'Invalid username or password');
+      return false;
+    }
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('app').style.setProperty('display', 'flex', 'important');
+    drawCharts();
+    loadDashboard();
+    startDashRefresh();
+    return true;
+  }
+
+  function togglePw(id, btn) {
+    var f = document.getElementById(id);
+    var on = f.type === 'password';
+    f.type = on ? 'text' : 'password';
+    btn.innerHTML = on
+      ? '<i class="bi bi-eye-slash"></i>'
+      : '<i class="bi bi-eye"></i>';
+  }
+
+  function unlockThr() {
+    document.getElementById('thrLocked').style.display = 'none';
+    document.getElementById('thrUnlocked').style.display = 'block';
+  }
+  function lockThr() {
+    document.getElementById('thrUnlocked').style.display = 'none';
+    document.getElementById('thrLocked').style.display = 'block';
+  }
+
+  function logout() {
+    if (_dashTimer) { clearInterval(_dashTimer); _dashTimer = null; }
+    fetch('/api/logout', { method: 'POST' }).catch(function () {});
+    document.getElementById('app').style.setProperty('display', 'none', 'important');
+    document.getElementById('auth').style.display = 'flex';
+    go('dash');
+  }
+
+  Chart.defaults.animation = false;
+  Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+  Chart.defaults.font.weight = 600;
+  Chart.defaults.color = '#1a1a1a';
+  Chart.defaults.animations.colors = false;
+  Chart.defaults.animations.x = false;
+  Chart.defaults.animations.y = false;
+  Chart.defaults.transitions.active.animation.duration = 0;
+  Chart.defaults.transitions.resize.animation.duration = 0;
+
+  var drawn = false;
+  function drawCharts() {
+    if (drawn) return;
+    drawn = true;
+
+    window.donutChart = new Chart(document.getElementById('c1'), {
+      type: 'doughnut',
+      data: {
+        labels: [],
+        datasets: [{
+          data: [],
+          backgroundColor: [],
+          borderColor: '#1a1a1a',
+          borderWidth: 3,
+          hoverOffset: 12
+        }]
+      },
+      options: {
+        animation: false,
+        cutout: '62%',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    new Chart(document.getElementById('c2'), {
+      type: 'line',
+      data: {
+        labels: ['08:00','10:00','12:00','14:00','16:00','18:00','20:00'],
+        datasets: [
+          { label: 'All Alerts', data: [80, 120, 190, 310, 260, 180, 53], tension: 0.3,
+            borderColor: '#0d2c50', borderWidth: 4, pointRadius: 5,
+            pointBackgroundColor: '#ffd60a', pointBorderColor: '#1a1a1a', pointBorderWidth: 2,
+            backgroundColor: 'rgba(13,44,80,.12)', fill: true },
+          { label: 'True Threats', data: [2, 4, 6, 12, 5, 3, 2], tension: 0.3,
+            borderColor: '#ff5252', borderWidth: 4, pointRadius: 5,
+            pointBackgroundColor: '#fff', pointBorderColor: '#1a1a1a', pointBorderWidth: 2 }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  /* ---------- live dashboard data (replaces the old mock numbers) ---------- */
+  var DONUT_COLORS = ['#ff5252','#ffd60a','#0d2c50','#06d6a0','#f77f00','#9d4edd','#adb5bd','#c2185b','#2b8a3e'];
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmt(n) { return (n || 0).toLocaleString('en-US'); }
+  function setHTML(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
+  function setText(id, t) { var el = document.getElementById(id); if (el) el.textContent = t; }
+
+  async function apiGet(url) {
+    var res = await fetch(url);
+    var ct = res.headers.get('content-type') || '';
+    if (!res.ok || ct.indexOf('json') === -1) throw new Error(url + ' failed (' + res.status + ')');
+    return res.json();
+  }
+
+  async function loadDashboard() {
+    var dash, events, chains;
+    try {
+      var all = await Promise.all([apiGet('/api/dashboard'), apiGet('/api/events'), apiGet('/api/chains')]);
+      dash = all[0]; events = all[1]; chains = all[2];
+    } catch (e) {
+      console.error('Dashboard load failed:', e);
+      return;
+    }
+
+    var raw = dash.raw_log_total || 0;
+    var total = dash.event_total || 0;
+    var high = events.filter(function (e) { return e.risk === 'high'; });
+    var unc = events.filter(function (e) { return e.risk === 'uncertain'; });
+    var low = events.filter(function (e) { return e.risk === 'low'; });
+    var awaiting = (dash.awaiting || []).length;
+    var dismissed = events.filter(function (e) { return e.status === 'dismissed'; }).length;
+    var filtered = Math.max(0, raw - total);
+    var blocked = dash.blocked_count || 0;
+
+    /* pipeline strip */
+    setHTML('fsLogs', fmt(raw) + ' <span style="font-size:.7rem">logs today</span>');
+    setHTML('fsTriage', fmt(raw) + ' &rarr; ' + fmt(total));
+    setText('fsFiltLink', 'why were ' + fmt(filtered) + ' filtered? →');
+    setHTML('fsInv', fmt(total) + ' <span style="font-size:.7rem">analysed</span>');
+    setHTML('fsChains', fmt(chains.length) + ' <span style="font-size:.7rem">attack chains</span>');
+    setHTML('fsResp', fmt(blocked) + ' <span style="font-size:.7rem">blocked</span> &middot; ' +
+                      fmt(awaiting) + ' <span style="font-size:.7rem">waiting</span>');
+
+    /* four stat cards */
+    setText('cardTotal', fmt(raw));
+    setText('cardTrue', fmt(high.length));
+    setText('cardFalse', fmt(filtered + dismissed));
+    setText('cardBlocked', fmt(blocked));
+
+    /* High / Uncertain / Low columns */
+    function riskItems(list, max, emptyMsg) {
+      if (!list.length) return '<li class="list-group-item text-muted small">' + emptyMsg + '</li>';
+      var html = list.slice(0, max).map(function (e) {
+        return '<li class="list-group-item d-flex justify-content-between"><span>' +
+               esc(e.attack_type || 'Unclassified') + '</span><small class="text-muted">' +
+               esc(e.source_ip) + '</small></li>';
+      }).join('');
+      if (list.length > max) html += '<li class="list-group-item text-muted small">and ' + (list.length - max) + ' more...</li>';
+      return html;
+    }
+    setText('colHiN', high.length);
+    setHTML('colHiList', riskItems(high, 3, 'No high risk events'));
+    setText('colUnN', unc.length);
+    setHTML('colUnList', riskItems(unc, 3, 'Nothing waiting for approval'));
+    setText('colLoN', low.length);
+    setText('colLoFold', low.length);
+    if (!low.length) {
+      setHTML('colLoList', '<li class="list-group-item text-muted small py-1">No low risk events</li>');
+    } else {
+      var lh = low.slice(0, 5).map(function (e) {
+        return '<li class="list-group-item d-flex justify-content-between py-1"><span>' +
+               esc(e.attack_type || 'Unclassified') + '</span><small class="text-muted">' +
+               esc(e.source_ip) + '</small></li>';
+      }).join('');
+      if (low.length > 5) lh += '<li class="list-group-item py-1"><a href="#" class="small" onclick="go(\'alerts\');return false">and ' + (low.length - 5) + ' more in Alerts &rarr;</a></li>';
+      setHTML('colLoList', lh);
+    }
+
+    /* attack-type doughnut + legend */
+    var dist = dash.attack_type_distribution || {};
+    var entries = Object.keys(dist).map(function (k) {
+      return [(!k || k === 'null') ? 'Unclassified' : k, dist[k]];
+    }).sort(function (a, b) { return b[1] - a[1]; });
+    setText('donutN', total);
+    setHTML('donutLegend', entries.length ? entries.map(function (en, i) {
+      return '<div class="dl"><span class="sw" style="background:' + DONUT_COLORS[i % DONUT_COLORS.length] + '"></span>' +
+             esc(en[0]) + '<span class="ct">' + en[1] + '</span></div>';
+    }).join('') : '<div class="dl text-muted">No events yet</div>');
+    if (window.donutChart) {
+      donutChart.data.labels = entries.map(function (en) { return en[0]; });
+      donutChart.data.datasets[0].data = entries.map(function (en) { return en[1]; });
+      donutChart.data.datasets[0].backgroundColor = entries.map(function (_, i) { return DONUT_COLORS[i % DONUT_COLORS.length]; });
+      donutChart.update();
+    }
+
+    /* recent incidents table */
+    var RISK_BADGE = {
+      high: '<span class="badge bg-danger">High</span>',
+      uncertain: '<span class="badge bg-warning text-dark">Uncertain</span>',
+      low: '<span class="badge bg-success">Low</span>'
+    };
+    var STATUS_LBL = {
+      blocked: '<span class="text-danger fw-bold">Blocked</span>',
+      awaiting: '<span class="fw-bold" style="color:#8a6d00">Awaiting</span>',
+      logged: '<span class="text-muted">Logged</span>',
+      dismissed: '<span class="text-muted">Dismissed</span>',
+      new: '<span class="text-muted">New</span>'
+    };
+    var rec = events.slice(0, 5).map(function (e) {
+      var conf = e.confidence == null ? '-' : Math.round(e.confidence * 100) + '%';
+      return '<tr>' +
+        '<td>' + (RISK_BADGE[e.risk] || '<span class="badge bg-secondary">' + esc(e.risk || '?') + '</span>') + '</td>' +
+        '<td>' + esc(e.attack_type || 'Unclassified') + '</td>' +
+        '<td><code>' + esc(e.source_ip) + '</code></td>' +
+        '<td>' + fmt(e.log_count) + '</td>' +
+        '<td>' + conf + '</td>' +
+        '<td>' + (STATUS_LBL[e.status] || esc(e.status || '')) + '</td></tr>';
+    }).join('');
+    setHTML('recentBody', rec || '<tr><td colspan="6" class="text-muted small text-center py-3">No events yet</td></tr>');
+
+    /* sidebar approval badge */
+    var nb = document.getElementById('navApproveN');
+    if (nb) { nb.textContent = awaiting; nb.style.display = awaiting ? '' : 'none'; }
+  }
+</script>
+
+
+<div class="modal fade" id="botAskModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title mb-0">High risk notifications</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small mb-2">
+          Buddy pops up only when a high risk event is detected, and shows you the
+          source IP and the attack type.
+        </p>
+        <p class="small mb-0">
+          Currently <span id="botAskState" class="badge bg-success">ON</span>
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-sm btn-primary" id="botAskBtn" onclick="botToggleNotify()">Turn notifications off</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<div class="modal fade" id="triageModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title mb-0">Why 1,181 logs never reached you</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small">
+          The triage agent groups raw logs by source IP and rule, then scores each group with
+          the classifier. Anything scoring at or below the low threshold is logged and closed.
+          Here is what was filtered today and why.
+        </p>
+        <table class="table table-bordered table-sm">
+          <thead>
+            <tr><th>Source IP</th><th>Matched Rule</th><th>Logs</th><th>Confidence</th><th>Reason</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>192.168.56.101</code></td><td>port-scan-syn</td><td>1024</td>
+              <td><span class="conf-mini"><div style="width:12%;background:#06d6a0"></div></span>12%</td>
+              <td class="small">Scan from an internal monitoring host on the allow list.</td>
+            </tr>
+            <tr>
+              <td><code>192.168.56.105</code></td><td>http-404-burst</td><td>88</td>
+              <td><span class="conf-mini"><div style="width:19%;background:#06d6a0"></div></span>19%</td>
+              <td class="small">Broken links crawled by a search engine bot, no payload found.</td>
+            </tr>
+            <tr>
+              <td><code>192.168.56.121</code></td><td>dir-probe</td><td>41</td>
+              <td><span class="conf-mini"><div style="width:27%;background:#06d6a0"></div></span>27%</td>
+              <td class="small">Requests for /admin returned 403, no follow-up attempts.</td>
+            </tr>
+            <tr>
+              <td><code>192.168.56.130</code></td><td>robots-crawler</td><td>28</td>
+              <td><span class="conf-mini"><div style="width:9%;background:#06d6a0"></div></span>9%</td>
+              <td class="small">Well behaved crawler, respected robots.txt.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="alert alert-info py-2 small mb-0">
+          <i class="bi bi-info-circle"></i>
+          If any of these should not have been filtered, open it in All Events and mark it as a
+          real threat. The classifier learns from that decision.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-sm btn-primary" data-bs-dismiss="modal" onclick="go('alerts')">Open All Events</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="addUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h6 class="modal-title mb-0">Add New User</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2"><label class="form-label small fw-bold">Full Name</label>
+          <input type="text" class="form-control" placeholder="e.g. Chong Mei San"></div>
+        <div class="mb-2"><label class="form-label small fw-bold">Username</label>
+          <input type="text" class="form-control" placeholder="e.g. analyst04"></div>
+        <div class="mb-2"><label class="form-label small fw-bold">Email</label>
+          <input type="email" class="form-control" placeholder="name@company.com"></div>
+        <div class="mb-2"><label class="form-label small fw-bold">Role</label>
+          <select class="form-select"><option>SOC Analyst</option><option>SOC Manager</option></select></div>
+        <div class="mb-0"><label class="form-label small fw-bold">Temporary Password</label>
+          <input type="text" class="form-control" value="Cyren@Temp2026">
+          <div class="form-text">The user will be asked to change this on first login.</div></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm btn-primary" data-bs-dismiss="modal">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h6 class="modal-title mb-0">Edit User</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2"><label class="form-label small fw-bold">Full Name</label>
+          <input type="text" class="form-control" value="Chong Mei San"></div>
+        <div class="mb-2"><label class="form-label small fw-bold">Username</label>
+          <input type="text" class="form-control" value="analyst01" disabled></div>
+        <div class="mb-2"><label class="form-label small fw-bold">Role</label>
+          <select class="form-select"><option>SOC Analyst</option><option>SOC Manager</option></select></div>
+        <div class="mb-0"><label class="form-label small fw-bold">Reset Password</label>
+          <button class="btn btn-outline-secondary btn-sm d-block mt-1">Send reset link</button></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm btn-primary" data-bs-dismiss="modal">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== BUDDY the robot ===== -->
+<div id="bot" title="Buddy. Drag me around!">
+  <svg viewBox="0 -2 84 88">
+    <g class="body-g">
+      <!-- antenna -->
+      <line x1="42" y1="16" x2="42" y2="9" stroke="#1a1a1a" stroke-width="3"/>
+      <circle class="antenna-light" cx="42" cy="7" r="4.5" stroke="#1a1a1a" stroke-width="2.2"/>
+      <!-- side ears -->
+      <rect x="7"  y="30" width="9" height="16" rx="4.5" fill="#5a34c8" stroke="#1a1a1a" stroke-width="2.6"/>
+      <rect x="68" y="30" width="9" height="16" rx="4.5" fill="#5a34c8" stroke="#1a1a1a" stroke-width="2.6"/>
+      <!-- BIG head -->
+      <rect x="12" y="13" width="60" height="44" rx="20" fill="#7048e8" stroke="#1a1a1a" stroke-width="3.2"/>
+      <!-- face screen -->
+      <rect x="20" y="21" width="44" height="27" rx="13" fill="#141d2e" stroke="#0c1420" stroke-width="2"/>
+      <!-- glowing blue eyes -->
+      <g class="eye"><ellipse cx="34" cy="34" rx="4.2" ry="4.8" fill="#4d9dff"/><ellipse cx="34" cy="32.3" rx="1.8" ry="2.1" fill="#bfe0ff"/></g>
+      <g class="eye"><ellipse cx="50" cy="34" rx="4.2" ry="4.8" fill="#4d9dff"/><ellipse cx="50" cy="32.3" rx="1.8" ry="2.1" fill="#bfe0ff"/></g>
+      <!-- small narrow body -->
+      <rect x="27" y="57" width="30" height="16" rx="8" fill="#7048e8" stroke="#1a1a1a" stroke-width="3"/>
+      <!-- chest ":0" -->
+      <rect x="32" y="60" width="20" height="9" rx="3.5" fill="#141d2e" stroke="#0c1420" stroke-width="1.4"/>
+      <circle cx="38" cy="64.5" r="1.2" fill="#4d9dff"/>
+      <circle cx="41.5" cy="64.5" r="1.2" fill="#4d9dff"/>
+      <text x="46" y="67" font-family="monospace" font-size="6" font-weight="700" fill="#4d9dff">0</text>
+      <!-- little feet -->
+      <rect x="31" y="72" width="9" height="5.5" rx="2.7" fill="#5a34c8" stroke="#1a1a1a" stroke-width="2.2"/>
+      <rect x="44" y="72" width="9" height="5.5" rx="2.7" fill="#5a34c8" stroke="#1a1a1a" stroke-width="2.2"/>
+    </g>
+  </svg>
+</div>
+<div class="bot-bubble" id="botBubble">
+  <b>HIGH RISK !!</b><br>
+  <span style="font-family:monospace">192.168.56.102</span><br>
+  SQL Injection
+  <span class="go">Click to view &rarr;</span>
+</div>
+
+<script>
+/* ---------- system-wide search ---------- */
+function globalGo(q){
+  q=(q||'').trim();
+  go('alerts');
+  var box=document.getElementById('alertsSearch');
+  if(box){ box.value=q; }
+  filterAlerts(q);
+}
+function filterAlerts(q){
+  q=(q||'').toLowerCase().trim();
+  document.querySelectorAll('#p-alerts table tbody tr').forEach(function(tr){
+    tr.style.display=(!q||tr.textContent.toLowerCase().indexOf(q)>-1)?'':'none';
+  });
+}
+function filterReports(q){
+  q=(q||'').toLowerCase().trim();
+  document.querySelectorAll('#reportGrid [data-search]').forEach(function(c){
+    c.closest('.col-md-4').style.display=(!q||c.dataset.search.indexOf(q)>-1)?'':'none';
+  });
+}
+/* risk chips on alerts page */
+(function(){
+  var chips=document.querySelectorAll('#p-alerts .chip');
+  chips.forEach(function(ch){
+    ch.addEventListener('click',function(){
+      chips.forEach(function(c){c.classList.remove('active');});
+      ch.classList.add('active');
+      var t=ch.textContent.trim().split(' ')[0].toLowerCase();
+      document.querySelectorAll('#p-alerts table tbody tr').forEach(function(tr){
+        var badge=tr.querySelector('td .badge');
+        var risk=badge?badge.textContent.trim().toLowerCase():'';
+        tr.style.display=(t==='all'||risk===t)?'':'none';
+      });
+    });
+  });
+})();
+
+/* ---------- BUDDY ---------- */
+(function(){
+  var bot=document.getElementById('bot');
+  var bubble=document.getElementById('botBubble');
+  var BOT_W=88,BOT_H=88;
+  var alerting=false,dragging=false,moved=false;
+  var offX=0,offY=0,lastDrag=0;
+
+  function roamOn(){var el=document.getElementById('setRoam');return !el||el.checked;}
+  function homeTop(){return window.innerHeight-BOT_H-8;}
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+  function placeBubble(){
+    var r=bot.getBoundingClientRect();
+    var bw=bubble.offsetWidth||250, bh=bubble.offsetHeight||96;
+    /* anchor the tail to Buddy's head: tail sits 30px in from the bubble's left */
+    var left=clamp(r.left + r.width/2 - 30, 8, window.innerWidth - bw - 8);
+    var top =r.top - bh - 14;
+    if(top < 8){ top = r.bottom + 14; bubble.classList.add('below'); }
+    else { bubble.classList.remove('below'); }
+    bubble.style.left=left+'px';
+    bubble.style.top =top+'px';
+  }
+  /* keep the bubble glued to Buddy while he walks or is dragged */
+  (function follow(){ if(alerting) placeBubble(); requestAnimationFrame(follow); })();
+  function syncVisible(){
+    /* Buddy always stays on screen. Turning notifications off only stops the pop-up. */
+    bot.classList.toggle('sleepy',!roamOn());
+    if(!roamOn()){ bubble.classList.remove('show'); bot.classList.remove('alerting'); alerting=false; }
+  }
+  document.addEventListener('change',function(e){ if(e.target&&e.target.id==='setRoam')syncVisible(); });
+  syncVisible();
+
+
+
+  bot.addEventListener('pointerdown',function(e){
+    dragging=true;moved=false;
+    bot.setPointerCapture(e.pointerId);
+    var r=bot.getBoundingClientRect();
+    offX=e.clientX-r.left;offY=e.clientY-r.top;
+    bot.classList.add('dragging');bot.classList.remove('walking');
+    if(alerting)bubble.classList.remove('show');
+    e.preventDefault();
+  });
+  bot.addEventListener('pointermove',function(e){
+    if(!dragging)return;moved=true;
+    bot.style.left=clamp(e.clientX-offX,12,window.innerWidth-BOT_W-12)+'px';
+    bot.style.top=clamp(e.clientY-offY,0,window.innerHeight-BOT_H)+'px';
+  });
+  bot.addEventListener('pointerup',function(e){
+    dragging=false;bot.classList.remove('dragging');lastDrag=Date.now();
+    if(alerting){placeBubble();bubble.classList.add('show');}
+    if(!moved){ alerting ? goApprove() : askNotify(); }
+  });
+
+  /* clicking Buddy when nothing is wrong: ask about notifications */
+  function askNotify(){
+    var m=document.getElementById('botAskModal');
+    var sw=document.getElementById('setRoam');
+    var on=!sw||sw.checked;
+    document.getElementById('botAskState').textContent = on ? 'ON' : 'OFF';
+    document.getElementById('botAskState').className = on ? 'badge bg-success' : 'badge bg-secondary';
+    document.getElementById('botAskBtn').textContent = on ? 'Turn notifications off' : 'Turn notifications on';
+    new bootstrap.Modal(m).show();
+  }
+  window.botToggleNotify=function(){
+    var sw=document.getElementById('setRoam');
+    if(sw){ sw.checked=!sw.checked; sw.dispatchEvent(new Event('change',{bubbles:true})); }
+    bootstrap.Modal.getInstance(document.getElementById('botAskModal')).hide();
+  };
+  window.addEventListener('resize',function(){
+    bot.style.top=clamp(parseFloat(bot.style.top)||homeTop(),0,homeTop())+'px';
+    if(alerting)placeBubble();
+  });
+
+  window.startBotAlert=function(){
+    setTimeout(function(){
+      if(!roamOn())return;    /* notifications off: Buddy stays, but stays quiet */
+      alerting=true;
+      bot.style.left=Math.min(window.innerWidth-360,window.innerWidth*0.45)+'px';
+      bot.style.top=homeTop()+'px';
+      bot.classList.add('alerting');
+      placeBubble();bubble.classList.add('show');
+    },5000);
+  };
+  function goApprove(){
+    if(typeof openEvent==='function')openEvent('alerts','high','done');
+    bubble.classList.remove('show');
+    bot.classList.remove('alerting');
+    alerting=false;
+  }
+  bubble.addEventListener('click',goApprove);
+
+  var _login=window.login;
+  window.login=function(){
+    Promise.resolve(_login()).then(function(ok){ if(ok) startBotAlert(); });
+  };
+
+})();
+</script>
+
+
+<script>
+/* ---- flat navigation, sidebar shows every level ---- */
+(function(){
+  var strip=document.getElementById('tabStrip');
+  if(strip) strip.style.display='none';
+
+  window.go=function(p){
+    document.querySelectorAll('.page').forEach(function(e){e.classList.remove('active');});
+    var pg=document.getElementById('p-'+p);
+    if(pg)pg.classList.add('active');
+    /* detail is a drill-down: keep the parent link lit */
+    var lit = (p==='detail') ? (window._from||'alerts') : p;
+    document.querySelectorAll('.sidebar .nav-link').forEach(function(a){
+      a.classList.toggle('active', a.dataset.p===lit);
+    });
+    var c=document.querySelector('.content'); if(c)c.scrollTop=0;
+  };
+  document.querySelectorAll('.sidebar .nav-link').forEach(function(a){
+    a.onclick=function(){go(a.dataset.p);};
+  });
+
+  window._from='alerts';
+  window.openEvent=function(from,risk,status){
+    window._from=from||'alerts';
+    var rb=document.getElementById('detailRisk');
+    var map={high:'<span class="badge bg-danger">High Risk</span>',
+             uncertain:'<span class="badge bg-warning">Uncertain</span>',
+             unclassified:'<span class="badge bg-secondary">Unclassified</span>',
+             low:'<span class="badge bg-success">Low Risk</span>'};
+    if(rb) rb.innerHTML = map[risk]||map.high;
+    var wait=document.getElementById('actWaiting');
+    var done=document.getElementById('actDone');
+    if(wait&&done){
+      var pending=(status==='waiting');
+      wait.style.display=pending?'block':'none';
+      done.style.display=pending?'none':'block';
+    }
+    go('detail');
+  };
+  window.goBack=function(){ go(window._from||'alerts'); };
+})();
+</script>
+
+
+<script>
+function openChain(){
+  document.getElementById('chainPick').style.display='none';
+  document.getElementById('chainView').style.display='block';
+  var c=document.querySelector('.content'); if(c)c.scrollTop=0;
+}
+function closeChain(){
+  document.getElementById('chainView').style.display='none';
+  document.getElementById('chainPick').style.display='block';
+}
+function filterChains(q){
+  q=(q||'').toLowerCase().trim();
+  document.querySelectorAll('#chainPick tbody tr').forEach(function(tr){
+    tr.style.display=(!q||(tr.dataset.search||'').indexOf(q)>-1)?'':'none';
+  });
+}
+function syncThr(which,val){
+  val=Math.max(0,Math.min(100,parseInt(val)||0));
+  var hi=parseInt(document.getElementById('hiNum').value)||85;
+  var lo=parseInt(document.getElementById('loNum').value)||40;
+  if(which==='hi'){ hi=val; if(hi<=lo) hi=lo+1;
+    document.getElementById('hiNum').value=hi; document.getElementById('hiRange').value=hi; }
+  else { lo=val; if(lo>=hi) lo=hi-1;
+    document.getElementById('loNum').value=lo; document.getElementById('loRange').value=lo; }
+  document.getElementById('segLow').style.width=lo+'%';
+  document.getElementById('segUnc').style.width=(hi-lo-1)+'%';
+  document.getElementById('segHigh').style.width=(100-hi+1)+'%';
+  document.getElementById('segLowTxt').textContent='0% to '+lo+'%';
+  document.getElementById('segUncTxt').textContent=(lo+1)+'% to '+(hi-1)+'%';
+  document.getElementById('segHighTxt').textContent=hi+'% to 100%';
+}
+/* reset the chain page whenever the user navigates to it */
+(function(){
+  var _go=window.go;
+  window.go=function(p){ _go(p); if(p==='chain') closeChain(); };
+})();
+</script>
+
+<script>
+/* keep the two profile columns on the same horizontal lines */
+function alignProfile(){
+  var root=document.documentElement;
+  root.style.setProperty('--rowA','auto');
+  root.style.setProperty('--rowB','auto');
+  if(window.innerWidth<768) return;
+  var a=document.querySelectorAll('#p-profile .h-row-a');
+  var b=document.querySelectorAll('#p-profile .h-row-b');
+  if(a.length===2) root.style.setProperty('--rowA', Math.max(a[0].offsetHeight,a[1].offsetHeight)+'px');
+  if(b.length===2) root.style.setProperty('--rowB', Math.max(b[0].offsetHeight,b[1].offsetHeight)+'px');
+}
+window.addEventListener('resize',alignProfile);
+(function(){
+  var _go=window.go;
+  window.go=function(p){ _go(p); if(p==='profile') setTimeout(alignProfile,30); };
+})();
+</script>
+<script>
+function filterUsers(q){
+  q=(q||'').toLowerCase().trim();
+  document.querySelectorAll('#p-users tbody tr[data-search]').forEach(function(tr){
+    tr.style.display=(!q||tr.dataset.search.indexOf(q)>-1)?'':'none';
+  });
+}
+</script>
+</body>
+</html>

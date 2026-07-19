@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+data/cyren.db
+data/models/*.json
+data/chroma/
+data/reports/
+data/logs/
+.pytest_cache/
+venv/
