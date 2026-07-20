@@ -1095,27 +1095,60 @@
       <!-- ===== REPORTS ===== -->
       <div class="page" id="p-reports">
 
-        <div class="row mb-3 g-2">
-          <div class="col-md-5">
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-search"></i></span>
-              <input type="text" class="form-control" id="reportsSearch" placeholder="Search reports..." oninput="filterReports(this.value)">
+        <div class="card mb-3">
+          <div class="card-header card-header-navy">Find An Incident Report</div>
+          <div class="card-body">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Search</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-search"></i></span>
+                  <input type="text" class="form-control" id="reportsSearch"
+                         placeholder="IP, attack type, or event ID" oninput="filterReports(this.value)">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small mb-1">From (date &amp; time)</label>
+                <div class="input-group">
+                  <input type="date" class="form-control" id="repFromD" onchange="syncRepBounds()">
+                  <input type="time" class="form-control" id="repFromT">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small mb-1">To (date &amp; time)</label>
+                <div class="input-group">
+                  <input type="date" class="form-control" id="repToD" onchange="syncRepBounds()">
+                  <input type="time" class="form-control" id="repToT">
+                </div>
+              </div>
+              <div class="col-md-2 d-flex gap-2">
+                <button class="btn btn-primary flex-grow-1" onclick="loadReports()">Apply</button>
+                <button class="btn btn-outline-secondary" onclick="resetReportFilters()">Clear</button>
+              </div>
             </div>
+            <p class="text-muted small mb-0 mt-2">
+              Every event has its own incident report. The PDF is generated the first time you
+              view or download it, then kept on file.
+            </p>
           </div>
         </div>
 
         <div class="card mb-4">
-          <div class="card-header card-header-navy">Incident Reports</div>
+          <div class="card-header card-header-navy d-flex justify-content-between align-items-center">
+            <span>Incident Reports</span>
+            <small style="color:rgba(255,255,255,.85);font-weight:600;text-transform:none;letter-spacing:0"
+                   id="reportsCount"></small>
+          </div>
           <div class="table-responsive">
             <table class="table table-bordered table-hover mb-0">
               <thead>
                 <tr>
-                  <th>Report</th><th>Attack / Title</th><th>Risk</th>
-                  <th>Resolution</th><th>Created</th><th>Actions</th>
+                  <th>Event</th><th>Date</th><th>Time</th><th>Attack Type</th>
+                  <th>Source IP</th><th>Risk</th><th>Status</th><th>Report</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody id="reportsBody">
-                <tr><td colspan="6" class="text-muted small text-center py-3">Loading...</td></tr>
+                <tr><td colspan="9" class="text-muted small text-center py-3">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -2502,24 +2535,11 @@ async function openEventDetail(id) {
 
   renderDetailResponse(e);
   go('detail');
-
-  var rep = await eventReport(e.id);
-  var btn = document.getElementById('dPdfBtn');
-  if (btn) btn.disabled = !rep;
 }
 
-async function eventReport(eventId) {
-  try {
-    if (!_reportsCache) _reportsCache = await apiGet('/api/reports');
-  } catch (e) { return null; }
-  return _reportsCache.find(function (r) { return r.event_id === eventId; }) || null;
-}
-
-async function downloadEventReport() {
-  if (!_detailEvent) return;
-  var rep = await eventReport(_detailEvent.id);
-  if (!rep) { alert('No PDF report exists for this event.'); return; }
-  window.open('/api/reports/' + rep.id + '/download', '_blank');
+/* Every event can produce a report; the PDF is generated on first use. */
+function downloadEventReport() {
+  if (_detailEvent) window.open('/api/events/' + _detailEvent.id + '/report/download', '_blank');
 }
 
 function renderDetailResponse(e) {
@@ -2760,44 +2780,104 @@ async function addBlockPrompt() {
   loadDashboard();
 }
 
-/* ---------------- Incident Reports ---------------- */
-var _selReport = null;
+/* ---------------- Incident Reports ----------------
+   One report per event. The table lists every event with its date and
+   time; View/Download generate the PDF on first use.                  */
+var _selEventId = null;
+
+function repBound(dateId, timeId) {
+  var d = document.getElementById(dateId).value;
+  var t = document.getElementById(timeId).value;
+  if (!d) return '';
+  return t ? d + ' ' + t : d;
+}
+
+function syncRepBounds() {
+  var f = document.getElementById('repFromD'), t = document.getElementById('repToD');
+  t.min = f.value || '';
+  f.max = t.value || '';
+}
+
+function resetReportFilters() {
+  ['reportsSearch', 'repFromD', 'repFromT', 'repToD', 'repToT']
+    .forEach(function (id) { document.getElementById(id).value = ''; });
+  syncRepBounds();
+  loadReports();
+}
 
 async function loadReports() {
-  try { _reportsCache = await apiGet('/api/reports'); } catch (e) { return; }
-  var rows = _reportsCache.map(function (r) {
-    var fname = (r.file_path || '').split(/[\\\/]/).pop();
-    var search = ('incident report #' + r.id + ' ' + (r.title || '') + ' ' +
-                  (r.risk || '') + ' ' + (r.resolution || '') + ' ' + fname).toLowerCase();
-    return '<tr data-search="' + esc(search) + '">' +
-      '<td><strong>#' + r.id + '</strong></td>' +
-      '<td>' + esc(r.title || fname || '-') + '</td>' +
-      '<td>' + riskBadge(r.risk) + '</td>' +
-      '<td>' + esc((r.resolution || '-').replace(/_/g, ' ')) + '</td>' +
-      '<td><small>' + fmtDT(r.created_at) + '</small></td>' +
+  var from = repBound('repFromD', 'repFromT');
+  var to = repBound('repToD', 'repToT');
+  if (from && to && from > to) { alert("'From' must not be after 'To'."); return; }
+  var qs = [];
+  if (from) qs.push('from=' + encodeURIComponent(from));
+  if (to) qs.push('to=' + encodeURIComponent(to));
+
+  var events, reports;
+  try {
+    var all = await Promise.all([
+      apiGet('/api/events' + (qs.length ? '?' + qs.join('&') : '')),
+      apiGet('/api/reports')
+    ]);
+    events = all[0]; reports = all[1];
+  } catch (e) { return; }
+
+  _reportsCache = reports;
+  var byEvent = {};
+  reports.forEach(function (r) { if (r.event_id) byEvent[r.event_id] = r; });
+
+  var rows = events.map(function (e) {
+    var rep = byEvent[e.id];
+    var search = ('#' + e.id + ' ' + (e.attack_type || '') + ' ' + e.source_ip + ' ' +
+                  (e.risk || '') + ' ' + (e.status || '') + ' ' +
+                  fmtD(e.first_seen) + ' ' + fmtT(e.first_seen)).toLowerCase();
+    return '<tr data-search="' + esc(search) + '" id="repRow' + e.id + '">' +
+      '<td><strong>#' + e.id + '</strong></td>' +
+      '<td>' + fmtD(e.first_seen) + '</td>' +
+      '<td><small>' + (fmtT(e.first_seen) || '-') + '</small></td>' +
+      '<td>' + esc(e.attack_type || 'Unclassified') + '</td>' +
+      '<td><code>' + esc(e.source_ip) + '</code></td>' +
+      '<td>' + riskBadge(e.risk) + '</td>' +
+      '<td>' + statusLabel(e.status) + '</td>' +
+      '<td>' + (rep ? '<span class="badge bg-success">Ready</span>'
+                    : '<span class="badge bg-secondary">On demand</span>') + '</td>' +
       '<td>' +
-        '<button class="btn btn-sm btn-primary mb-1" onclick="previewReport(' + r.id + ')"><i class="bi bi-eye"></i> Preview</button> ' +
-        '<button class="btn btn-sm btn-outline-primary mb-1" onclick="window.open(\'/api/reports/' + r.id + '/download\',\'_blank\')"><i class="bi bi-download"></i> Download</button>' +
+        '<button class="btn btn-sm btn-primary mb-1" onclick="viewEventReport(' + e.id + ')">' +
+          '<i class="bi bi-eye"></i> View</button> ' +
+        '<button class="btn btn-sm btn-outline-primary mb-1" onclick="downloadEventReportById(' + e.id + ')">' +
+          '<i class="bi bi-download"></i> Download</button>' +
       '</td></tr>';
   }).join('');
-  setHTML('reportsBody', rows || '<tr><td colspan="6" class="text-muted small text-center py-3">No reports generated yet</td></tr>');
+  setHTML('reportsBody', rows ||
+    '<tr><td colspan="9" class="text-muted small text-center py-3">No events in this date range</td></tr>');
+  setText('reportsCount', events.length + ' event' + (events.length === 1 ? '' : 's'));
+
   var q = document.getElementById('reportsSearch').value;
   if (q) filterReports(q);
 }
 
-function previewReport(id) {
-  _selReport = (_reportsCache || []).find(function (r) { return r.id === id; }) || null;
-  var fname = _selReport ? (_selReport.file_path || '').split(/[\\\/]/).pop() : '';
-  setText('pdfName', fname || ('Report #' + id));
+function viewEventReport(eventId) {
+  _selEventId = eventId;
+  document.querySelectorAll('#reportsBody tr').forEach(function (tr) {
+    tr.style.background = '';
+  });
+  var row = document.getElementById('repRow' + eventId);
+  if (row) row.style.background = '#fff3b0';
+  setText('pdfName', 'Incident report for event #' + eventId);
   document.getElementById('pdfDlBtn').disabled = false;
   document.getElementById('pdfEmpty').style.display = 'none';
   var f = document.getElementById('pdfFrame');
   f.style.display = 'block';
-  f.src = '/api/reports/' + id + '/preview';
+  f.src = '/api/events/' + eventId + '/report/preview';
+  f.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function downloadEventReportById(eventId) {
+  window.open('/api/events/' + eventId + '/report/download', '_blank');
 }
 
 function downloadSelectedReport() {
-  if (_selReport) window.open('/api/reports/' + _selReport.id + '/download', '_blank');
+  if (_selEventId) downloadEventReportById(_selEventId);
 }
 
 /* ---------------- User Management ---------------- */

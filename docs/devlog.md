@@ -143,3 +143,43 @@
 - Settings 页的阈值数值、Email 通知、模型重训、Agent 开关仍是演示 UI，
   没有后端持久化（需要新增配置表并接入 triage 路由，另开任务）。
 - All Events 的批量勾选框无批量操作；报告无批量导出。
+
+---
+
+## 2026-07-19 — 每个 event 都有自己的报告 + 日期时间搜索（并修好 PDF 生成）
+
+### 做了什么
+
+1. **报告按需生成，覆盖所有事件**（之前只有 high risk 自动封禁时才有）：
+   - `_state_from_event(event)`：从 Event 行（含关联 AttackChain、BlockedIP）
+     还原出 report_service 需要的 state dict。
+   - `_ensure_report(event)`：已有且文件在磁盘上就复用，否则生成 PDF 并
+     upsert Report 行。
+   - 新接口 `POST /api/events/<id>/report`、
+     `GET /api/events/<id>/report/preview`、`/download`。
+     详情页 Export PDF 改用后者，不再需要报告事先存在。
+2. **Reports 页改成事件表格**：列出每个事件的 Event# / Date / Time /
+   Attack Type / Source IP / Risk / Status / Report（Ready 或 On demand）
+   + View / Download 两个按钮；点 View 高亮该行并在下方 iframe 内嵌预览，
+   点 Download 直接下载。
+3. **日期 + 时间搜索**：`_parse_bound` 支持 `YYYY-MM-DD` 与
+   `YYYY-MM-DD HH:MM`（末端分别滚到次日零点 / 该分钟末尾）；Reports 页
+   提供 From/To 各一组 date + time 输入，配 Apply / Clear，并有 min/max
+   联动防止选出倒序区间。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| **下载到的"PDF"其实是 42 字节的 .txt 占位文件** | 根因是 venv 里 Pillow 12.3.0 的 `_imaging` C 扩展坏了（`cannot import name '_imaging' from 'PIL'`），reportlab 导入失败后 report_service 静默走 `_canvas is None` 的占位分支。`pip install --force-reinstall --no-cache-dir pillow==11.3.0` 修复，现在产出真 PDF（application/pdf，约 2.2 KB） |
+| 表格显示 first_seen，过滤却按 last_seen，按表里看到的时间搜反而搜不到 | `_apply_date_range` 改为**区间重叠**语义：`last_seen >= start AND first_seen < end`（用 coalesce 兜空值），无论按事件的开始还是结束时刻搜都能命中 |
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- 冒烟（3 个不同日期时间、不同风险等级的事件，初始 0 份报告）：
+  三个事件的 preview 都返回 `application/pdf`（2176–2218 字节）；
+  download 带 attachment 头；生成后 reports 表恰好 3 条（每事件一份）；
+  重复 preview 复用不重复生成；日期时间过滤 6 种组合全部命中预期
+  （含 09:30–09:30 这种精确到分钟、落在事件窗口内的查询）；
+  from>to 400、非法时间 400、不存在的事件 404。

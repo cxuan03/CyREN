@@ -31,32 +31,59 @@ api = Blueprint("api", __name__, url_prefix="/api")
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def _parse_date_range():
-    """Read optional ?from=YYYY-MM-DD&to=YYYY-MM-DD query params.
+def _parse_bound(value, is_end):
+    """Parse a date or date-time bound.
 
-    Returns (start, end, error). `end` is exclusive (start of the next day)
-    so a single-day range covers the whole day.
+    Accepts 'YYYY-MM-DD' (whole day; an end bound rolls to the next midnight
+    so the day is included) and 'YYYY-MM-DD HH:MM' / 'YYYY-MM-DDTHH:MM'
+    (exact minute, with an end bound rolling to the end of that minute).
+    """
+    v = value.strip().replace("T", " ")
+    for fmt, is_day in (("%Y-%m-%d %H:%M:%S", False), ("%Y-%m-%d %H:%M", False),
+                        ("%Y-%m-%d", True)):
+        try:
+            dt = datetime.strptime(v, fmt)
+        except ValueError:
+            continue
+        if is_end:
+            dt += timedelta(days=1) if is_day else timedelta(minutes=1)
+        return dt
+    raise ValueError(value)
+
+
+def _parse_date_range():
+    """Read optional ?from=&to= query params (date or date-time).
+
+    Returns (start, end, error); `end` is exclusive.
     """
     f = request.args.get("from")
     t = request.args.get("to")
     start = end = None
     try:
         if f:
-            start = datetime.strptime(f, "%Y-%m-%d")
+            start = _parse_bound(f, is_end=False)
         if t:
-            end = datetime.strptime(t, "%Y-%m-%d") + timedelta(days=1)
+            end = _parse_bound(t, is_end=True)
     except ValueError:
-        return None, None, "invalid date, expected YYYY-MM-DD"
+        return None, None, "invalid date, expected YYYY-MM-DD or YYYY-MM-DD HH:MM"
     if start and end and start >= end:
-        return None, None, "'from' date must not be after 'to' date"
+        return None, None, "'from' must not be after 'to'"
     return start, end, None
 
 
 def _apply_date_range(query, start, end):
+    """Keep events whose activity window overlaps [start, end).
+
+    An event spans first_seen..last_seen, so matching on overlap means a
+    search for the time shown in the table finds that event, whether the
+    user searched by its start or its end.
+    """
+    first = db.func.coalesce(Event.first_seen, Event.last_seen)
+    last = db.func.coalesce(Event.last_seen, Event.first_seen)
     if start:
-        query = query.filter(Event.last_seen >= start)
+        query = query.filter(last >= start)
     if end:
-        query = query.filter(Event.last_seen < end)
+        query = query.filter(first < end)
     return query
 
 
@@ -202,6 +229,85 @@ def _report_path(report):
     if not os.path.isabs(path):
         path = os.path.join(_PROJECT_ROOT, path)
     return path if os.path.isfile(path) else None
+
+
+def _state_from_event(e):
+    """Rebuild the pipeline-state dict the report writer expects from a
+    persisted Event, so any event can be turned into a PDF on demand."""
+    chain = AttackChain.query.get(e.chain_id) if e.chain_id else None
+    block = BlockedIP.query.filter_by(event_id=e.id).first()
+    return {
+        "source_ip": e.source_ip, "dest_ip": e.dest_ip,
+        "attack_type": e.attack_type, "rule": e.rule,
+        "log_count": e.log_count, "risk": e.risk,
+        "confidence": e.confidence, "severity": e.risk,
+        "mitre_techniques": e.mitre_techniques or [],
+        "llm_summary": e.llm_summary or {},
+        "threat_intel": e.threat_intel or {},
+        "asset": e.asset_info or {},
+        "vulnerability": e.vuln_info or {},
+        "is_multistage": bool(chain and (chain.stage_count or 0) > 1),
+        "chain_risk": chain.highest_risk if chain else None,
+        "chain_assessment": None,
+        "chain_stages": (chain.stages or []) if chain else [],
+        "predicted_next": chain.predicted_next if chain else None,
+        "action_taken": {"blocked": "blocked", "awaiting": "awaiting_approval",
+                         "dismissed": "dismissed as false positive"}.get(e.status, "logged"),
+        "blocked": bool(block and block.active),
+    }
+
+
+def _ensure_report(event):
+    """Return an existing on-disk report for this event, or generate one."""
+    rep = (Report.query.filter_by(event_id=event.id)
+           .order_by(Report.id.desc()).first())
+    if rep and _report_path(rep):
+        return rep
+
+    from app.services.report_service import generate_report
+    path = generate_report(_state_from_event(event))
+    resolution = {"blocked": "auto_blocked", "awaiting": "awaiting_approval",
+                  "dismissed": "dismissed"}.get(event.status, "logged")
+    if rep:
+        rep.file_path = path
+        rep.resolution = resolution
+    else:
+        rep = Report(event_id=event.id,
+                     title=f"{event.attack_type or 'Event'} from {event.source_ip}",
+                     risk=event.risk, resolution=resolution, file_path=path)
+        db.session.add(rep)
+    db.session.commit()
+    return rep
+
+
+@api.post("/events/<int:event_id>/report")
+@login_required
+def create_event_report(event_id):
+    """Generate (or reuse) the PDF incident report for any event."""
+    e = Event.query.get_or_404(event_id)
+    return jsonify({"ok": True, "report": _ensure_report(e).to_dict()})
+
+
+@api.get("/events/<int:event_id>/report/download")
+@login_required
+def download_event_report(event_id):
+    e = Event.query.get_or_404(event_id)
+    rep = _ensure_report(e)
+    path = _report_path(rep)
+    if not path:
+        return jsonify({"error": "report could not be generated"}), 500
+    return send_file(path, as_attachment=True, download_name=os.path.basename(path))
+
+
+@api.get("/events/<int:event_id>/report/preview")
+@login_required
+def preview_event_report(event_id):
+    e = Event.query.get_or_404(event_id)
+    rep = _ensure_report(e)
+    path = _report_path(rep)
+    if not path:
+        return jsonify({"error": "report could not be generated"}), 500
+    return send_file(path)
 
 
 @api.get("/reports/<int:report_id>/download")
