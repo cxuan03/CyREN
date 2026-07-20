@@ -1954,40 +1954,21 @@
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title mb-0">Why 1,181 logs never reached you</h6>
+        <h6 class="modal-title mb-0">What triage filtered out</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <p class="small">
           The triage agent groups raw logs by source IP and rule, then scores each group with
-          the classifier. Anything scoring at or below the low threshold is logged and closed.
-          Here is what was filtered today and why.
+          the classifier. Groups scoring at or below the low threshold are logged and closed
+          without asking you. These are the low-risk groups currently in the database:
         </p>
         <table class="table table-bordered table-sm">
           <thead>
-            <tr><th>Source IP</th><th>Matched Rule</th><th>Logs</th><th>Confidence</th><th>Reason</th></tr>
+            <tr><th>Source IP</th><th>Matched Rule</th><th>Logs</th><th>Confidence</th><th>Last Seen</th></tr>
           </thead>
-          <tbody>
-            <tr>
-              <td><code>192.168.56.101</code></td><td>port-scan-syn</td><td>1024</td>
-              <td><span class="conf-mini"><div style="width:12%;background:#06d6a0"></div></span>12%</td>
-              <td class="small">Scan from an internal monitoring host on the allow list.</td>
-            </tr>
-            <tr>
-              <td><code>192.168.56.105</code></td><td>http-404-burst</td><td>88</td>
-              <td><span class="conf-mini"><div style="width:19%;background:#06d6a0"></div></span>19%</td>
-              <td class="small">Broken links crawled by a search engine bot, no payload found.</td>
-            </tr>
-            <tr>
-              <td><code>192.168.56.121</code></td><td>dir-probe</td><td>41</td>
-              <td><span class="conf-mini"><div style="width:27%;background:#06d6a0"></div></span>27%</td>
-              <td class="small">Requests for /admin returned 403, no follow-up attempts.</td>
-            </tr>
-            <tr>
-              <td><code>192.168.56.130</code></td><td>robots-crawler</td><td>28</td>
-              <td><span class="conf-mini"><div style="width:9%;background:#06d6a0"></div></span>9%</td>
-              <td class="small">Well behaved crawler, respected robots.txt.</td>
-            </tr>
+          <tbody id="triageBody">
+            <tr><td colspan="5" class="text-muted small text-center py-2">Loading...</td></tr>
           </tbody>
         </table>
         <div class="alert alert-info py-2 small mb-0">
@@ -3045,6 +3026,20 @@ async function verifyAndUnlock() {
   document.addEventListener('DOMContentLoaded', function () {
     var vu = document.getElementById('verifyUser');
     if (vu) vu.value = (window.CURRENT_USER || {}).username || '';
+
+    /* triage modal: fill with the real low-risk groups when opened */
+    var tm = document.getElementById('triageModal');
+    if (tm) tm.addEventListener('show.bs.modal', async function () {
+      var data;
+      try { data = await apiGet('/api/events?risk=low'); } catch (e) { return; }
+      setHTML('triageBody', data.map(function (e2) {
+        return '<tr><td><code>' + esc(e2.source_ip) + '</code></td>' +
+          '<td>' + esc(e2.rule || '-') + '</td>' +
+          '<td>' + fmt(e2.log_count) + '</td>' +
+          '<td>' + confMini(e2.confidence) + '</td>' +
+          '<td><small>' + fmtDT(e2.last_seen) + '</small></td></tr>';
+      }).join('') || '<tr><td colspan="5" class="text-muted small text-center py-2">No low-risk groups recorded</td></tr>');
+    });
   });
 })();
 </script>
