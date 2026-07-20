@@ -290,3 +290,64 @@
 - 逐页肉眼复核：完整样本 3 页，三处新增说明文字就位，
   Response Actions 标题+说明+6 行表格完整同页；稀疏样本仍优雅降级。
 - 样张已更新：`docs/sample/sample_incident_report.pdf`。
+
+---
+
+## 2026-07-20 — 修好 Groq LLM 调用：报告里终于是真实 AI 分析
+
+### 查到的原因（三个串联的问题）
+
+用户反馈 .env 里的 GROQ_API_KEY 是有效真 key，但报告 AI Analysis 仍是
+"Placeholder analysis. Connect the Groq API..."。逐层排查后发现**与
+chromadb/GraphRAG 无关**（那块只影响 MITRE 检索，静态 fallback 一直正常），
+真正原因是三个问题串在一起：
+
+1. **`import groq` 失败**：`ModuleNotFoundError: No module named
+   'pydantic_core._pydantic_core'` —— venv 里 pydantic-core 的编译扩展是坏的
+   （与之前 Pillow `_imaging` 同一类问题）。investigation.py 顶部的
+   `except ImportError: Groq = None` 把它静默吞掉，于是 `self.groq is None`，
+   直接走占位符分支。key 本身完全正常（gsk_ 开头、56 字符、正确读入 settings）。
+2. 修好 pydantic 后暴露第二层：**groq 0.11.0 与 httpx 0.28.1 不兼容**
+   （`Client.__init__() got an unexpected keyword argument 'proxies'`）。
+   而且这个错误发生在模块级 `_investigation = InvestigationAgent()`，
+   会直接让整个 app 导入失败。
+3. 升级 groq 后暴露第三层：**配置的模型已下架**——
+   `meta-llama/llama-4-scout-17b-16e-instruct` 返回 404 model_not_found。
+   查该 key 可用模型，选定 `llama-3.3-70b-versatile`（仍是 Llama 系，70B 质量最好）。
+
+### 做了什么
+
+1. `pip install --force-reinstall pydantic==2.13.4`（修复 pydantic-core）、
+   `pip install --upgrade groq` → 1.5.0；requirements.txt 相应更新并注明原因，
+   同时补上 `pillow==11.3.0`（上次口头修复没落进依赖文件）。
+2. `.env` / `.env.example` / `settings.py` 的 GROQ_MODEL 改为
+   `llama-3.3-70b-versatile`。
+3. **让这类失败不再静默**（这是本 bug 拖到现在的根本原因）：
+   - import 失败记录具体异常而非丢弃，`_init_groq()` 把不可用原因写进
+     `agent.llm_status` 并打 WARNING 日志。
+   - 客户端构造失败不再让整个模块导入崩溃。
+   - API 调用加 try/except：失败不再中断流水线，但会打 ERROR 日志，
+     并把原因写进 `llm_summary.llm_error`，报告里显示
+     "AI analysis unavailable: <原因>" 而不是含糊的 "Placeholder"。
+4. 新增 `scripts/check_llm.py`：逐项检查 groq 包 / key / 客户端 /
+   可用模型列表 / 配置的模型是否在列 / 真实调用，一键定位问题。
+5. 新增 `scripts/reanalyse_events.py`：对库中已有事件重跑 investigation，
+   替换占位符分析，并删除据其生成的旧 PDF 报告（下次查看时自动重生成）。
+   支持 `--dry-run` 和 `--all`；LLM 不可用时拒绝运行，避免用占位符覆盖占位符。
+
+### 验证结果
+
+- `scripts/check_llm.py` 六项全 OK，`RESULT: LLM analysis is working.`
+- `reanalyse_events.py` 处理了库里全部 3 个事件，均成功并各删除 1 份旧报告。
+- 抽查数据库：三个事件的 what_happened / what_could_go_wrong /
+  what_should_be_done / urgency 都是针对该事件的真实内容
+  （例如 SSH Brute Force 那条提到 189 条日志、建议启用 MFA 和限速）。
+- 重新生成报告并逐页看图确认：AI ANALYSIS 区块四个框都是真实分析文本，
+  urgency 药丸显示 LOW，MITRE 表格正常。
+- `pytest` 5 个全过。
+
+### 遗留
+
+- 事件 #1 的 source_ip 存的是字面量 "unknown"，说明 siem_service 从那条
+  Kibana 告警里没提取出源 IP，需要回头看该规则的日志格式（与本次无关）。
+- chromadb 仍不可用，MITRE 走静态 fallback 映射；GraphRAG 仍是 FYP2 增量。

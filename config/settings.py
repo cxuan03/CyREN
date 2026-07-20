@@ -50,7 +50,9 @@ class Settings:
 
     # ---- Investigation ----
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL = os.getenv("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+    # Llama 4 Scout was retired from Groq; 3.3-70b is the current general
+    # instruct model. Run scripts/check_llm.py to list what a key can access.
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "data/chroma")
     CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "mitre_attack")
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

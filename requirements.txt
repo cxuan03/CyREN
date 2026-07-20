@@ -17,7 +17,8 @@ numpy==2.1.1
 joblib==1.4.2
 
 # ---- Investigation: LLM + RAG ----
-groq==0.11.0
+# groq 0.11 passes `proxies` to httpx, which httpx >= 0.28 removed; 1.5 fixes it.
+groq==1.5.0
 chromadb==0.5.7
 # Gemini embeddings (used to embed the MITRE ATT&CK knowledge base)
 google-generativeai==0.8.3
@@ -30,6 +31,9 @@ elasticsearch==8.15.1
 
 # ---- Reporting ----
 reportlab==4.2.2
+# reportlab imports PIL; Pillow 12.x shipped a broken _imaging extension on
+# this Python build, which silently downgraded reports to text placeholders.
+pillow==11.3.0
 
 # ---- Dev / testing ----
 pytest==8.3.3

@@ -19,35 +19,68 @@ TODO (FYP2 implementation):
     3. Tune the prompt in `_build_prompt`.
 """
 import json
+import logging
 
 from config.settings import settings
 from app.agents.state import AgentState
 
+log = logging.getLogger(__name__)
+
+# Import failures are recorded rather than swallowed: a broken dependency used
+# to silently degrade every report to placeholder text with nothing in the logs
+# to explain why.
 try:
     from groq import Groq
-except ImportError:
+    _GROQ_IMPORT_ERROR = None
+except Exception as exc:                       # noqa: BLE001 - report any cause
     Groq = None
+    _GROQ_IMPORT_ERROR = f"{type(exc).__name__}: {exc}"
 
 try:
     import chromadb
-except ImportError:
+    _CHROMA_IMPORT_ERROR = None
+except Exception as exc:                       # noqa: BLE001
     chromadb = None
+    _CHROMA_IMPORT_ERROR = f"{type(exc).__name__}: {exc}"
 
 
 class InvestigationAgent:
     def __init__(self):
-        self.groq = Groq(api_key=settings.GROQ_API_KEY) if (Groq and settings.GROQ_API_KEY) else None
+        self.groq = None
+        self.llm_status = "not initialised"
+        self._init_groq()
         self.collection = None
         self._load_collection()
 
+    def _init_groq(self):
+        """Build the Groq client, explaining loudly if we cannot."""
+        if Groq is None:
+            self.llm_status = f"groq package unavailable ({_GROQ_IMPORT_ERROR})"
+        elif not settings.GROQ_API_KEY:
+            self.llm_status = "GROQ_API_KEY is not set in .env"
+        else:
+            try:
+                self.groq = Groq(api_key=settings.GROQ_API_KEY)
+                self.llm_status = f"ready (model {settings.GROQ_MODEL})"
+                log.info("InvestigationAgent: Groq client %s", self.llm_status)
+                return
+            except Exception as exc:           # noqa: BLE001
+                self.llm_status = f"Groq client failed to start: {type(exc).__name__}: {exc}"
+        log.warning("InvestigationAgent: LLM analysis disabled - %s. "
+                    "Reports will contain placeholder text.", self.llm_status)
+
     def _load_collection(self):
         if chromadb is None:
+            log.info("InvestigationAgent: chromadb unavailable (%s); using the static "
+                     "MITRE fallback map.", _CHROMA_IMPORT_ERROR)
             return
         try:
             client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
             self.collection = client.get_collection(settings.CHROMA_COLLECTION)
-        except Exception:
+        except Exception as exc:               # noqa: BLE001
             self.collection = None   # knowledge base not built yet
+            log.info("InvestigationAgent: MITRE knowledge base not available (%s); "
+                     "using the static fallback map.", exc)
 
     # ------------------------------------------------------------------
     def _graphrag_retrieve(self, state: AgentState, k: int = 5) -> list:
@@ -111,25 +144,44 @@ class InvestigationAgent:
             f"total known: {vuln.get('vuln_count')}\n"
         )
 
+    @staticmethod
+    def _placeholder(reason: str) -> dict:
+        """Used only when the LLM is genuinely unavailable. The reason is
+        carried into the summary so the report and the logs say why."""
+        return {
+            "what_happened": f"AI analysis unavailable: {reason}",
+            "what_could_go_wrong": "",
+            "what_should_be_done": "",
+            "urgency": "MEDIUM",
+            "llm_error": reason,
+        }
+
     def _ask_llm(self, prompt: str) -> dict:
         if self.groq is None:
-            # PLACEHOLDER analysis so the pipeline runs without a Groq key
-            return {
-                "what_happened": "Placeholder analysis. Connect the Groq API to generate this.",
-                "what_could_go_wrong": "Placeholder risk assessment.",
-                "what_should_be_done": "Placeholder recommendation.",
-                "urgency": "MEDIUM",
-            }
-        resp = self.groq.chat.completions.create(
-            model=settings.GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            response_format={"type": "json_object"},
-        )
+            return self._placeholder(self.llm_status)
+
         try:
-            return json.loads(resp.choices[0].message.content)
+            resp = self.groq.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            )
+        except Exception as exc:               # noqa: BLE001
+            # A failing API call must not take down the pipeline, but it must
+            # be visible rather than looking like a normal empty analysis.
+            reason = f"{type(exc).__name__}: {exc}"
+            log.error("InvestigationAgent: Groq call failed - %s", reason)
+            return self._placeholder(reason)
+
+        content = ""
+        try:
+            content = resp.choices[0].message.content
+            return json.loads(content)
         except (json.JSONDecodeError, AttributeError, IndexError):
-            return {"what_happened": resp.choices[0].message.content,
+            log.warning("InvestigationAgent: model did not return valid JSON; "
+                        "storing the raw text.")
+            return {"what_happened": content or "Model returned an empty response.",
                     "what_could_go_wrong": "", "what_should_be_done": "",
                     "urgency": "MEDIUM"}
 
