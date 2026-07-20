@@ -79,6 +79,9 @@ class Settings:
     SMTP_USER = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
     ALERT_EMAIL_TO = os.getenv("ALERT_EMAIL_TO", "")
+    # Base URL of the CyREN web app, used to build the "open in CyREN" link in
+    # the alert email so an analyst can jump straight to the incident.
+    APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:5000")
 
     # ---- Reports ----
     REPORT_OUTPUT_DIR = os.getenv("REPORT_OUTPUT_DIR", "data/reports")

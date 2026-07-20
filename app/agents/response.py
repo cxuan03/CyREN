@@ -21,7 +21,7 @@ import subprocess
 from config.settings import settings
 from app.agents.state import AgentState
 from app.services.report_service import generate_report
-from app.services.email_service import send_alert_email
+from app.services.email_service import send_alert_email, build_alert_email
 
 
 class ResponseAgent:
@@ -67,13 +67,13 @@ class ResponseAgent:
             return False
 
     def _send_email(self, state: AgentState):
-        if not settings.ALERT_EMAIL_TO or not settings.SMTP_HOST:
-            return
-        send_alert_email(
-            to=settings.ALERT_EMAIL_TO,
-            subject=f"[CyREN] High risk: {state.get('attack_type')} from {state.get('source_ip')}",
-            body=str(state.get("llm_summary", {})),
-        )
+        # Build the HTML alert (with the direct "open in CyREN" link) and hand
+        # it off. send_alert_email logs the full content when SMTP is unset, so
+        # the notification is always visible even before SMTP is configured.
+        subject, html = build_alert_email(state)
+        to = settings.ALERT_EMAIL_TO or "soc-team@localhost"
+        sent = send_alert_email(to=to, subject=subject, html_body=html)
+        state["email_sent"] = sent
 
     # ------------------------------------------------------------------
     def run(self, state: AgentState) -> AgentState:

@@ -168,7 +168,10 @@ class SiemService:
         if not since or not until:
             return "", []
 
-        docs = self._source_docs_for_rule(alert_source, since, until)
+        # Widen the window with Elasticsearch date math: a threshold rule's
+        # window can be just a few seconds, and the originating log lines may
+        # sit slightly outside it, which used to leave the source IP "unknown".
+        docs = self._source_docs_for_rule(alert_source, since + "||-10m", until + "||+2m")
         if not docs:
             return "", []
 

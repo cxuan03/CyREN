@@ -561,3 +561,59 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
 - 起真实 app 认证后验证：`/api/events` 的源IP只剩 192.168.56.104/150/151，
   无 127.0.0.1 / 192.168.56.1；header live 指示器 + markRefreshed 接线到位；
   apprSearch 回车已接。
+
+---
+
+## 2026-07-20 — 一批 UI/数据修复：header 布局、汉堡菜单、响应式、邮件带链接、清噪音
+
+回应用户 9 点反馈（含几个"是什么意思"的提问）。
+
+### 做了什么
+
+1. **Header 布局（#1）**：把搜索框和 LIVE 指示器包进 `.header-right` 右对齐组，
+   搜索紧挨在 LIVE 药丸左边；汉堡按钮放最左。
+2. **汉堡菜单开关侧栏（#8）**：header 左侧加汉堡按钮，`toggleSidebar()` 切换
+   `body.sidebar-hidden`（桌面直接收起侧栏，移动端为抽屉滑入 + 半透明遮罩）。
+3. **响应式设计（#9）**：加媒体查询——≤1100px header 紧凑、搜索自适应；
+   ≤900px 侧栏变固定抽屉（默认收起，汉堡打开，点菜单项/遮罩关闭），header 换行；
+   ≤560px LIVE 只显示时间。表格本就有 `.table-responsive` 横向滚动，KPI 卡片
+   Bootstrap 栅格自动堆叠。
+4. **All Events 去掉没用的勾选框列（#3）**：那列原是"批量操作"的占位，从未接线，
+   删掉表头/行/colspan（避免误导；需要批量操作可另提）。
+5. **分页可翻（#4）**：Rows 选择器加 `10`。原因是当前仅 14 个事件，25/页只有 1 页
+   所以"翻不了"，选 10/页即有 2 页；分页逻辑本身没问题。
+6. **邮件真发 + 带直达链接（#7）**：`email_service` 重写为 HTML 邮件，含
+   "Open this incident in CyREN →" 按钮（链接 `APP_BASE_URL/#ip=<ip>`）；
+   `build_alert_email(state)` 生成主题/正文；SMTP 未配置时把完整邮件（含链接）
+   打到日志，配置后真发。ResponseAgent 高风险封禁后总会触发（不再因缺配置静默跳过）。
+   前端加 `#ip=` 深链处理：邮件点进来自动跳到该源 IP 的事件。新增 `APP_BASE_URL` 配置。
+7. **清噪音 + 减少 unknown（#2/#5）**：拓宽 threshold 告警的源日志回查窗口
+   （`since||-10m` ~ `until||+2m`），减少 SSH 这类归因失败的 unknown；purge 脚本
+   扩展为同时清理黑名单/unknown 的**事件和攻击链**。已清掉 unknown 事件 #23 和
+   192.168.56.1 的噪音链，现为 14 事件 / 2 条真实链（.104、.151）。
+
+### 回答用户的三个提问
+
+- **#3 勾选框**：All Events 第一列的勾选框是"批量选择"占位，从没接功能——已删除。
+- **#5 Unknown**：那条是 SSH 暴力破解（threshold 规则不带源 IP），回查原始日志时
+  时间窗太窄没命中而归因失败。已拓宽窗口降低复发，并删掉那条无源事件。
+- **#6 攻击链图**：SVG 里每个圆点是攻击链的一个阶段（按时间从左到右、颜色随风险
+  绿→黄→红），圆点上方是攻击类型、下方是 kill-chain 阶段名（Recon/Initial Access/
+  Execution…），虚线圆点是"预测的下一阶段"。连线表示同一源 IP 的攻击按时间推进。
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- 起真实 app 认证后结构校验全绿：header-right 分组且搜索在 LIVE 左侧、汉堡+overlay+
+  toggleSidebar 就位、900px 抽屉媒体查询存在、勾选框已删、10 行选项在、`#ip=` 深链
+  处理在；`/api/events` 源 IP 只剩 .104/.150/.151（无 unknown/噪音），链无噪音。
+- `build_alert_email` 生成的邮件含 `/#ip=<ip>` 链接；SMTP 未配置时 `send_alert_email`
+  记录完整内容并返回 False。
+
+### 遗留 / 需用户侧配合
+
+- **邮件真实投递**需在 `.env` 填 `SMTP_HOST/USER/PASSWORD/ALERT_EMAIL_TO`；未填时
+  只在控制台记录邮件内容（含链接）。`APP_BASE_URL` 默认 localhost:5000，部署到 VM 时
+  改成可访问的地址，邮件链接才对外可用。
+- 响应式需人工在浏览器缩放/DevTools 设备模式下核验（in-app 浏览器禁访问 localhost）。
+- 多数真实攻击事件被分类为 low（triage 置信度低），属模型问题，待用更多标注数据重训。

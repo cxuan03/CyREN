@@ -12,8 +12,13 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app                                   # noqa: E402
-from app.models.db import db, Event, Report, BlockedIP, Decision  # noqa: E402
+from app.models.db import db, Event, Report, BlockedIP, Decision, AttackChain  # noqa: E402
 from app.services.siem_service import _is_blacklisted        # noqa: E402
+
+
+def _is_noise(ip):
+    """Blacklisted source, or one that could never be attributed."""
+    return _is_blacklisted(ip) or not ip or ip == "unknown"
 
 
 def main():
@@ -21,11 +26,13 @@ def main():
     app = create_app()
     with app.app_context():
         events = Event.query.order_by(Event.id).all()
-        noise = [e for e in events if _is_blacklisted(e.source_ip)]
-        print(f"{len(events)} events, {len(noise)} on the blacklist"
+        noise = [e for e in events if _is_noise(e.source_ip)]
+        chains = [c for c in AttackChain.query.all() if _is_noise(c.source_ip)]
+        print(f"{len(events)} events ({len(noise)} noise) and "
+              f"{AttackChain.query.count()} chains ({len(chains)} noise)"
               f"{' (dry run)' if dry else ''}:\n")
         for e in noise:
-            print(f"  #{e.id} {e.rule or e.attack_type} from {e.source_ip} "
+            print(f"  event #{e.id} {e.rule or e.attack_type} from {e.source_ip} "
                   f"({e.log_count} logs)")
             if dry:
                 continue
@@ -43,9 +50,14 @@ def main():
             Decision.query.filter_by(event_id=e.id).delete()
             BlockedIP.query.filter_by(event_id=e.id).delete()
             db.session.delete(e)
+        for c in chains:
+            print(f"  chain #{c.id} from {c.source_ip} ({c.stage_count} stages)")
+            if not dry:
+                db.session.delete(c)
         if not dry:
             db.session.commit()
-            print(f"\nDeleted {len(noise)} event(s). Remaining: {Event.query.count()}")
+            print(f"\nDeleted {len(noise)} event(s) + {len(chains)} chain(s). "
+                  f"Remaining: {Event.query.count()} events, {AttackChain.query.count()} chains")
         else:
             print("\n(dry run; nothing deleted)")
     return 0
