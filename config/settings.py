@@ -44,7 +44,7 @@ class Settings:
 
     # ---- Background pipeline scheduler ----
     ENABLE_SCHEDULER = _bool("ENABLE_SCHEDULER", False)
-    POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "60") or 60)
+    POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "15") or 15)
 
     # ---- Triage ----
     XGBOOST_MODEL_PATH = os.getenv("XGBOOST_MODEL_PATH", "data/models/triage_xgb.json")

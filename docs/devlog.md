@@ -480,3 +480,46 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
 
 - `bash -n` 两个脚本语法均通过。
 - 实际攻击需在 Kali/Target VM 上跑（本机无靶场，无法端到端执行）。
+
+---
+
+## 2026-07-20 — 数据刷新加速 + 全站事件筛选栏统一
+
+### 做了什么
+
+1. **scheduler 轮询 60s → 15s**（settings.py 默认值 + .env + .env.example）。
+2. **Dashboard 前端自动刷新 30s → 10s，且刷新当前所在页**：新 `refreshActive()`
+   每 10 秒按 `window._activePage` 重新拉取当前页数据（dashboard 的 KPI/列表，
+   或 All Events / Approval / Chains 等列表页），不用手动刷新。导航 `go()` 记录
+   当前页并暴露 `window._pageLoaders` 供定时器复用。
+3. **删掉 Reports 页那句** "Every event has its own incident report..."。
+4. **Human Approval 加筛选栏**：Search（IP/攻击类型/事件ID，客户端过滤）+
+   From/To（日期+时间）+ Apply/Clear，与 Reports 页一致。
+5. **全站"事件筛选 Apply"统一**：抽出共享辅助
+   `dtBound()`/`dtSync()`/`dtRangeParts()`（读日期+时间 → API 边界、min/max 联动、
+   构造 ?from=&to= 并校验 from≤to）。Dashboard 顶栏、All Events、Human Approval、
+   Attack Chain、Reports 五处筛选栏全部改成同一套"Search + From(date&time) +
+   To(date&time) + Apply + Clear"结构与行为；All Events 的 Reset 改名 Clear，
+   日期框由 date 升级为 date+time；Attack Chain 的 From/To 从死控件变为客户端
+   按时间区间重叠过滤链。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| 各页筛选栏结构/行为不一致（date-only vs date+time、Reset vs Clear、Approval 无筛选） | 统一到共享 `dt*` 辅助 + 同一套 HTML 结构，五页一致 |
+| `/api/chains` 无日期参数 | Attack Chain 的日期区间改为客户端按 first_seen/last_seen 与所选区间重叠判断 |
+| 自动刷新只刷 dashboard，切到别的页就不动 | 定时器改为刷新 `window._activePage` 对应的 loader |
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- 带会话的结构化验证脚本全绿：10s 刷新已接（refreshActive/10000，旧 30000 已移除、
+  _pageLoaders 暴露）；Reports 说明已删；三个共享 dt 辅助就位；Human Approval /
+  All Events / Attack Chain / Dashboard 五处新筛选 id 全部存在、旧 id（alertsFrom/
+  dateFrom 等）已消失、Reset 已改 Clear；自动刷新命中的 /api/dashboard、/api/events、
+  /api/events?status=awaiting、/api/chains 认证后均 200。
+
+### 如何验证自动刷新生效（交给用户）
+
+见下方回复。

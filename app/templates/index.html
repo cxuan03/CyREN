@@ -496,16 +496,26 @@
         </div>
 
 
-        <div class="row mb-3">
-          <div class="col-auto">
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-md-4">
+            <label class="form-label small mb-1">From (date &amp; time)</label>
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-              <input type="date" class="form-control" id="dateFrom" onchange="syncDateBounds()">
-              <span class="input-group-text">to</span>
-              <input type="date" class="form-control" id="dateTo" onchange="syncDateBounds()">
-              <button class="btn btn-outline-secondary" onclick="applyDateFilter()">Apply</button>
-              <button class="btn btn-outline-secondary" onclick="clearDateFilter()">Clear</button>
+              <input type="date" class="form-control" id="dashFromD" onchange="syncDashBounds()">
+              <input type="time" class="form-control" id="dashFromT">
             </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-1">To (date &amp; time)</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+              <input type="date" class="form-control" id="dashToD" onchange="syncDashBounds()">
+              <input type="time" class="form-control" id="dashToT">
+            </div>
+          </div>
+          <div class="col-md-2 d-flex gap-2">
+            <button class="btn btn-primary flex-grow-1" onclick="applyDateFilter()">Apply</button>
+            <button class="btn btn-outline-secondary" onclick="clearDateFilter()">Clear</button>
           </div>
         </div>
 
@@ -650,32 +660,38 @@
       <div class="page" id="p-alerts">
 
         <div class="card mb-3">
-          <div class="card-header card-header-navy">Search and Filter</div>
+          <div class="card-header card-header-navy">Find An Event</div>
           <div class="card-body">
 
-            <div class="row g-2 mb-3">
-              <div class="col-md-5">
+            <div class="row g-2 align-items-end mb-3">
+              <div class="col-md-4">
                 <label class="form-label small mb-1">Search</label>
                 <div class="input-group">
                   <span class="input-group-text"><i class="bi bi-search"></i></span>
-                  <input type="text" class="form-control" id="alertsSearch" placeholder="IP address, attack type, or incident ID" oninput="filterAlerts(this.value)">
+                  <input type="text" class="form-control" id="alertsSearch" placeholder="IP, attack type, or event ID" oninput="filterAlerts(this.value)">
                 </div>
               </div>
-              <div class="col-md-3">
-                <label class="form-label small mb-1">IP Contains</label>
-                <input type="text" class="form-control" id="alertsIp" placeholder="192.168.56.">
+              <div class="col-md-4">
+                <label class="form-label small mb-1">From (date &amp; time)</label>
+                <div class="input-group">
+                  <input type="date" class="form-control" id="alertsFromD" onchange="syncAlertsBounds()">
+                  <input type="time" class="form-control" id="alertsFromT">
+                </div>
               </div>
               <div class="col-md-4">
-                <label class="form-label small mb-1">Date Range</label>
+                <label class="form-label small mb-1">To (date &amp; time)</label>
                 <div class="input-group">
-                  <input type="date" class="form-control" id="alertsFrom">
-                  <span class="input-group-text">to</span>
-                  <input type="date" class="form-control" id="alertsTo">
+                  <input type="date" class="form-control" id="alertsToD" onchange="syncAlertsBounds()">
+                  <input type="time" class="form-control" id="alertsToT">
                 </div>
               </div>
             </div>
 
             <div class="row g-2 align-items-end">
+              <div class="col-md-2">
+                <label class="form-label small mb-1">IP Contains</label>
+                <input type="text" class="form-control" id="alertsIp" placeholder="192.168.56.">
+              </div>
               <div class="col-md-3">
                 <label class="form-label small mb-1">Risk Level</label>
                 <select class="form-select" id="alertsRisk">
@@ -691,7 +707,7 @@
                   <option value="">All Attack Types</option>
                 </select>
               </div>
-              <div class="col-md-3">
+              <div class="col-md-2">
                 <label class="form-label small mb-1">Status</label>
                 <select class="form-select" id="alertsStatus">
                   <option value="">All Status</option>
@@ -702,9 +718,9 @@
                   <option value="new">New</option>
                 </select>
               </div>
-              <div class="col-md-3 d-flex gap-2">
+              <div class="col-md-2 d-flex gap-2">
                 <button class="btn btn-primary flex-grow-1" onclick="loadAlerts()">Apply</button>
-                <button class="btn btn-outline-secondary" onclick="resetAlertsFilters()">Reset</button>
+                <button class="btn btn-outline-secondary" onclick="resetAlertsFilters()">Clear</button>
               </div>
             </div>
 
@@ -922,22 +938,32 @@
           <div class="card mb-3">
             <div class="card-header card-header-navy">Find An Attack Chain</div>
             <div class="card-body">
-              <div class="row g-2">
-                <div class="col-md-5">
-                  <label class="form-label small mb-1">Source IP</label>
+              <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label small mb-1">Search</label>
                   <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control" id="chainSearch"
-                           placeholder="Search by IP or attack type" oninput="filterChains(this.value)">
+                           placeholder="IP or attack type" oninput="filterChains(this.value)">
                   </div>
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label small mb-1">From</label>
-                  <input type="date" class="form-control">
+                  <label class="form-label small mb-1">From (date &amp; time)</label>
+                  <div class="input-group">
+                    <input type="date" class="form-control" id="chainFromD" onchange="syncChainBounds()">
+                    <input type="time" class="form-control" id="chainFromT">
+                  </div>
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label small mb-1">To</label>
-                  <input type="date" class="form-control">
+                  <label class="form-label small mb-1">To (date &amp; time)</label>
+                  <div class="input-group">
+                    <input type="date" class="form-control" id="chainToD" onchange="syncChainBounds()">
+                    <input type="time" class="form-control" id="chainToT">
+                  </div>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                  <button class="btn btn-primary flex-grow-1" onclick="loadChainsPage()">Apply</button>
+                  <button class="btn btn-outline-secondary" onclick="resetChainFilters()">Clear</button>
                 </div>
               </div>
             </div>
@@ -1002,6 +1028,40 @@
 
       <!-- ===== APPROVALS ===== -->
       <div class="page" id="p-approve">
+
+        <div class="card mb-3">
+          <div class="card-header card-header-navy">Find An Event To Review</div>
+          <div class="card-body">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Search</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-search"></i></span>
+                  <input type="text" class="form-control" id="apprSearch"
+                         placeholder="IP, attack type, or event ID" oninput="filterApprove(this.value)">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small mb-1">From (date &amp; time)</label>
+                <div class="input-group">
+                  <input type="date" class="form-control" id="apprFromD" onchange="syncApprBounds()">
+                  <input type="time" class="form-control" id="apprFromT">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small mb-1">To (date &amp; time)</label>
+                <div class="input-group">
+                  <input type="date" class="form-control" id="apprToD" onchange="syncApprBounds()">
+                  <input type="time" class="form-control" id="apprToT">
+                </div>
+              </div>
+              <div class="col-md-2 d-flex gap-2">
+                <button class="btn btn-primary flex-grow-1" onclick="loadApprove()">Apply</button>
+                <button class="btn btn-outline-secondary" onclick="resetApprFilters()">Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center" style="background:#0d2c50;color:#ffd60a">
@@ -1126,10 +1186,6 @@
                 <button class="btn btn-outline-secondary" onclick="resetReportFilters()">Clear</button>
               </div>
             </div>
-            <p class="text-muted small mb-0 mt-2">
-              Every event has its own incident report. The PDF is generated the first time you
-              view or download it, then kept on file.
-            </p>
           </div>
         </div>
 
@@ -1677,40 +1733,38 @@
   });
 
   var _dashTimer = null;
+  /* Auto-refresh every 10s: re-fetch the data for whichever page is on
+     screen (dashboard KPIs + lists, or the active list page), so the UI
+     tracks the 15s scheduler without a manual reload. */
+  function refreshActive() {
+    var p = window._activePage || 'dash';
+    if (p === 'dash') { loadDashboard(); return; }
+    var fn = window._pageLoaders && window._pageLoaders[p];
+    if (fn) fn();
+  }
   function startDashRefresh() {
     if (_dashTimer) clearInterval(_dashTimer);
-    _dashTimer = setInterval(loadDashboard, 30000);
+    _dashTimer = setInterval(refreshActive, 10000);
   }
 
   /* ---------- dashboard date-range filter (empty = all data) ---------- */
-  var _dateFrom = '', _dateTo = '';
-  function syncDateBounds() {
-    var f = document.getElementById('dateFrom'), t = document.getElementById('dateTo');
-    t.min = f.value || '';
-    f.max = t.value || '';
-  }
+  var _dashParts = [];
+  function syncDashBounds() { dtSync('dashFromD', 'dashToD'); }
   function applyDateFilter() {
-    var f = document.getElementById('dateFrom').value;
-    var t = document.getElementById('dateTo').value;
-    if (f && t && f > t) {
-      alert("'From' date cannot be after 'To' date.");
-      return;
-    }
-    _dateFrom = f; _dateTo = t;
+    var parts = dtRangeParts('dashFromD', 'dashFromT', 'dashToD', 'dashToT');
+    if (parts === null) return;
+    _dashParts = parts;
     loadDashboard();
   }
   function clearDateFilter() {
-    document.getElementById('dateFrom').value = '';
-    document.getElementById('dateTo').value = '';
-    syncDateBounds();
-    _dateFrom = ''; _dateTo = '';
+    ['dashFromD', 'dashFromT', 'dashToD', 'dashToT']
+      .forEach(function (id) { document.getElementById(id).value = ''; });
+    syncDashBounds();
+    _dashParts = [];
     loadDashboard();
   }
   function dateQuery() {
-    var qs = [];
-    if (_dateFrom) qs.push('from=' + _dateFrom);
-    if (_dateTo) qs.push('to=' + _dateTo);
-    return qs.length ? '?' + qs.join('&') : '';
+    return _dashParts.length ? '?' + _dashParts.join('&') : '';
   }
 
   /* logged-in user info in the sidebar */
@@ -2379,13 +2433,12 @@ function pwOk(p) {
 /* ---------------- All Events ---------------- */
 var _alertsData = [], _alertsPage = 1;
 
+function syncAlertsBounds() { dtSync('alertsFromD', 'alertsToD'); }
+
 async function loadAlerts() {
-  var qs = [];
-  var f = document.getElementById('alertsFrom').value;
-  var t = document.getElementById('alertsTo').value;
-  if (f && t && f > t) { alert("'From' date cannot be after 'To' date."); return; }
-  if (f) qs.push('from=' + f);
-  if (t) qs.push('to=' + t);
+  var parts = dtRangeParts('alertsFromD', 'alertsFromT', 'alertsToD', 'alertsToT');
+  if (parts === null) return;
+  var qs = parts.slice();
   var risk = document.getElementById('alertsRisk').value;
   var status = document.getElementById('alertsStatus').value;
   var ip = document.getElementById('alertsIp').value.trim();
@@ -2460,8 +2513,10 @@ function renderAlerts(page) {
 }
 
 function resetAlertsFilters() {
-  ['alertsSearch', 'alertsIp', 'alertsFrom', 'alertsTo', 'alertsRisk', 'alertsType', 'alertsStatus']
+  ['alertsSearch', 'alertsIp', 'alertsFromD', 'alertsFromT', 'alertsToD', 'alertsToT',
+   'alertsRisk', 'alertsType', 'alertsStatus']
     .forEach(function (id) { document.getElementById(id).value = ''; });
+  syncAlertsBounds();
   loadAlerts();
 }
 
@@ -2592,15 +2647,36 @@ async function unblockByIp(ip) {
 }
 
 /* ---------------- Human Approval ---------------- */
+function syncApprBounds() { dtSync('apprFromD', 'apprToD'); }
+
+function resetApprFilters() {
+  ['apprSearch', 'apprFromD', 'apprFromT', 'apprToD', 'apprToT']
+    .forEach(function (id) { document.getElementById(id).value = ''; });
+  syncApprBounds();
+  loadApprove();
+}
+
+function filterApprove(q) {
+  q = (q || '').toLowerCase().trim();
+  document.querySelectorAll('#approveBody tr[data-search]').forEach(function (tr) {
+    tr.style.display = (!q || tr.dataset.search.indexOf(q) > -1) ? '' : 'none';
+  });
+}
+
 async function loadApprove() {
+  var parts = dtRangeParts('apprFromD', 'apprFromT', 'apprToD', 'apprToT');
+  if (parts === null) return;
+  var qs = ['status=awaiting'].concat(parts);
   var data;
-  try { data = await apiGet('/api/events?status=awaiting'); } catch (e) { return; }
+  try { data = await apiGet('/api/events?' + qs.join('&')); } catch (e) { return; }
   setText('approveN', data.length);
   var rows = data.map(function (e) {
     var mins = e.last_seen
       ? Math.max(0, Math.round((Date.now() - new Date(e.last_seen + 'Z').getTime()) / 60000))
       : null;
-    return '<tr style="cursor:pointer" onclick="openEventDetail(' + e.id + ')">' +
+    var search = ('#' + e.id + ' ' + (e.attack_type || '') + ' ' + e.source_ip + ' ' +
+                  (e.risk || '')).toLowerCase();
+    return '<tr data-search="' + esc(search) + '" style="cursor:pointer" onclick="openEventDetail(' + e.id + ')">' +
       '<td>' + fmtD(e.first_seen) + '</td><td>' + (fmtT(e.first_seen) || '-') + '</td>' +
       '<td>' + riskBadge(e.risk) + '</td>' +
       '<td>' + esc(e.attack_type || 'Unclassified') + '</td>' +
@@ -2616,6 +2692,8 @@ async function loadApprove() {
       '</td></tr>';
   }).join('');
   setHTML('approveBody', rows || '<tr><td colspan="10" class="text-muted small text-center py-3">Nothing waiting for approval</td></tr>');
+  var q = document.getElementById('apprSearch');
+  if (q && q.value) filterApprove(q.value);
 }
 
 /* ---------------- Attack Chains ---------------- */
@@ -2626,9 +2704,36 @@ function chainRiskBadge(r) {
   return '<span class="badge bg-secondary">' + esc(r || '?') + '</span>';
 }
 
+function syncChainBounds() { dtSync('chainFromD', 'chainToD'); }
+
+function resetChainFilters() {
+  ['chainSearch', 'chainFromD', 'chainFromT', 'chainToD', 'chainToT']
+    .forEach(function (id) { document.getElementById(id).value = ''; });
+  syncChainBounds();
+  loadChainsPage();
+}
+
+/* /api/chains has no date param, so the range is applied client-side by
+   testing whether the chain's activity window overlaps [from, to]. */
+function chainInRange(c, from, to) {
+  var first = fmtDT(c.first_seen), last = fmtDT(c.last_seen);
+  if (from) {
+    var lo = from.length <= 10 ? from + ' 00:00:00' : (from.length <= 16 ? from + ':00' : from);
+    if (last !== '-' && last < lo) return false;
+  }
+  if (to) {
+    var hi = to.length <= 10 ? to + ' 23:59:59' : (to.length <= 16 ? to + ':59' : to);
+    if (first !== '-' && first > hi) return false;
+  }
+  return true;
+}
+
 async function loadChainsPage() {
-  var data;
-  try { data = await apiGet('/api/chains'); } catch (e) { return; }
+  var from = dtBound('chainFromD', 'chainFromT'), to = dtBound('chainToD', 'chainToT');
+  if (from && to && from > to) { alert("'From' must not be after 'To'."); return; }
+  var all;
+  try { all = await apiGet('/api/chains'); } catch (e) { return; }
+  var data = all.filter(function (c) { return chainInRange(c, from, to); });
   var rows = data.map(function (c) {
     var search = (c.source_ip + ' ' + (c.stages || []).map(function (st) { return st.attack_type; }).join(' ')).toLowerCase();
     return '<tr style="cursor:pointer" data-search="' + esc(search) + '" onclick="openChain(' + c.id + ')">' +
@@ -2639,7 +2744,9 @@ async function loadChainsPage() {
       '<td>' + chainRiskBadge(c.highest_risk) + '</td>' +
       '<td><button class="btn btn-sm btn-primary">View Chain</button></td></tr>';
   }).join('');
-  setHTML('chainsBody', rows || '<tr><td colspan="7" class="text-muted small text-center py-3">No attack chains detected yet</td></tr>');
+  setHTML('chainsBody', rows || '<tr><td colspan="7" class="text-muted small text-center py-3">No attack chains in this range</td></tr>');
+  var q = document.getElementById('chainSearch');
+  if (q && q.value) filterChains(q.value);
 }
 
 window.openChain = async function (id) {
@@ -2780,23 +2887,39 @@ async function addBlockPrompt() {
   loadDashboard();
 }
 
+/* ============ shared date+time range filter (used by every page) ============
+   Read a "date + time" input pair into an API bound ("YYYY-MM-DD HH:MM",
+   "YYYY-MM-DD", or ""), keep From <= To linked, and build the ?from=&to=
+   query. Every filter bar in the app uses these, so they all behave the
+   same way. */
+function dtBound(dateId, timeId) {
+  var d = document.getElementById(dateId).value;
+  var t = timeId ? document.getElementById(timeId).value : '';
+  if (!d) return '';
+  return t ? d + ' ' + t : d;
+}
+function dtSync(fromDateId, toDateId) {
+  var f = document.getElementById(fromDateId), t = document.getElementById(toDateId);
+  if (f && t) { t.min = f.value || ''; f.max = t.value || ''; }
+}
+/* returns an array of query parts (['from=..','to=..']) or null if invalid */
+function dtRangeParts(fromDateId, fromTimeId, toDateId, toTimeId) {
+  var from = dtBound(fromDateId, fromTimeId), to = dtBound(toDateId, toTimeId);
+  if (from && to && from > to) { alert("'From' must not be after 'To'."); return null; }
+  var p = [];
+  if (from) p.push('from=' + encodeURIComponent(from));
+  if (to) p.push('to=' + encodeURIComponent(to));
+  return p;
+}
+/* backwards-compatible aliases (repBound kept for any inline callers) */
+function repBound(dateId, timeId) { return dtBound(dateId, timeId); }
+
 /* ---------------- Incident Reports ----------------
    One report per event. The table lists every event with its date and
    time; View/Download generate the PDF on first use.                  */
 var _selEventId = null;
 
-function repBound(dateId, timeId) {
-  var d = document.getElementById(dateId).value;
-  var t = document.getElementById(timeId).value;
-  if (!d) return '';
-  return t ? d + ' ' + t : d;
-}
-
-function syncRepBounds() {
-  var f = document.getElementById('repFromD'), t = document.getElementById('repToD');
-  t.min = f.value || '';
-  f.max = t.value || '';
-}
+function syncRepBounds() { dtSync('repFromD', 'repToD'); }
 
 function resetReportFilters() {
   ['reportsSearch', 'repFromD', 'repFromT', 'repToD', 'repToT']
@@ -2806,12 +2929,9 @@ function resetReportFilters() {
 }
 
 async function loadReports() {
-  var from = repBound('repFromD', 'repFromT');
-  var to = repBound('repToD', 'repToT');
-  if (from && to && from > to) { alert("'From' must not be after 'To'."); return; }
-  var qs = [];
-  if (from) qs.push('from=' + encodeURIComponent(from));
-  if (to) qs.push('to=' + encodeURIComponent(to));
+  var parts = dtRangeParts('repFromD', 'repFromT', 'repToD', 'repToT');
+  if (parts === null) return;
+  var qs = parts;
 
   var events, reports;
   try {
@@ -3097,9 +3217,12 @@ async function verifyAndUnlock() {
     alerts: loadAlerts, approve: loadApprove, chain: loadChainsPage,
     blocked: loadBlocked, reports: loadReports, users: loadUsers, profile: loadProfile
   };
+  window._pageLoaders = LOADERS;   /* used by the 10s auto-refresh */
+  window._activePage = 'dash';
   var _go = window.go;
   window.go = function (p) {
     _go(p);
+    window._activePage = p;
     var fn = LOADERS[p];
     if (fn) fn();
   };
