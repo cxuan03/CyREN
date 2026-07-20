@@ -183,3 +183,69 @@
   重复 preview 复用不重复生成；日期时间过滤 6 种组合全部命中预期
   （含 09:30–09:30 这种精确到分钟、落在事件窗口内的查询）；
   from>to 400、非法时间 400、不存在的事件 404。
+
+---
+
+## 2026-07-20 — PDF 报告重排版：品牌化页头、表格化、内容补全
+
+### 做了什么
+
+`report_service.py` 从"纯文本 drawString 堆叠"重写成一套排版原语，
+配色沿用系统的 navy `#0d2c50` / yellow `#ffd60a`。
+
+**排版**
+
+- 每页顶部 navy 色带：黄色圆角方块内嵌 navy "C" 作为 logo 标记 +
+  "CyREN" 字标 + "SOC INCIDENT RESPONSE" 小字；右侧风险色块
+  （high 红 / uncertain 黄 / low 绿）。首页色带下方是报告标题和
+  `Incident #42 · IP · Generated ... UTC` 元信息行。
+- 区块标题统一为 navy 圆角横条 + 黄色大写字，8 个区块层次分明。
+- 新增布局原语（都自带分页）：`section()` 标题条、`kv_table()`
+  左标签右值两列表（标签列浅底、斑马纹）、`data_table()` navy 表头多列表、
+  `para_box()` 浅底段落框、`code_box()` 等宽代码框、`_pill()` 彩色药丸、
+  `confidence_bar()` 大号百分比 + 按风险上色的进度条。
+- 每页页脚：细分隔线 + "CyREN SOC Incident Response" + "Page N of M"。
+  总页数靠**两遍渲染**取得：先渲到 `io.BytesIO()` 数页数，再正式输出。
+
+**内容**
+
+- AI Analysis 完整展开成四个框：What Happened / Potential Impact /
+  Recommended Action / Urgency（urgency 带彩色药丸）。
+- 新增 MITRE ATT&CK 三列表格（ID / 技术名 / 战术）。战术是新加的：
+  知识库只存 `"T1190 Exploit Public-Facing Application"` 这种字符串没有战术，
+  报告里用 `MITRE_TACTICS` 静态映射解析，子技术回退到父 ID。
+- 新增攻击链区块：链风险药丸 + 评估 + 阶段时间线表 + 预测下一阶段。
+- 新增原始日志样本区块（Courier 等宽、浅灰底、超长行截断、最多 12 行并
+  注明还有多少条）。
+- Response Actions 扩充为：Action Taken / Source IP Blocked / Blocked At /
+  Decided By / Decision Time / Notification。
+- `_state_from_event()` 相应补充 event_id、first_seen/last_seen、
+  raw_log_sample、chain_assessment，以及查 Decision→User 得到的
+  decided_by / decided_at 和 BlockedIP 的 blocked_at / blocked_by。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| 首页元信息行被第一个区块标题条压住 | `_start_page()` 对第 1 页多留 52pt（标题 + 元信息），其余页 16pt |
+| 区块标题条孤零零留在页尾、内容翻到下一页 | `section()` 预留 92pt（标题条 + 首几行）再决定是否分页 |
+| 无法直接肉眼检查生成结果 | 装 `pypdfium2` 把 PDF 渲染成 PNG 自查，确认色块、表格、页脚、跨页都正常 |
+
+### 验证结果
+
+- `pytest` 5 个全过；报告 API 冒烟全过（三种风险等级都是 application/pdf，
+  体积从 2.2 KB 增到约 6 KB）。
+- 逐页肉眼验收两种极端样本：
+  - 完整样本（high risk、4 阶段攻击链、3 条 MITRE、5 行原始日志、
+    长篇 LLM 分析）→ 2 页，排版正确，样张存于
+    `docs/sample/sample_incident_report.pdf`。
+  - 稀疏样本（low risk、无 MITRE、无攻击链、无日志、无 LLM 分析）→
+    优雅降级：绿色 LOW RISK 标、"Not available." 占位、
+    MITRE 表显示 "None recorded."、攻击链区块自动省略、缺失值显示 "—"。
+
+### 遗留
+
+- `MITRE_TACTICS` 是手写的静态映射，只覆盖 fallback 用到的技术；
+  等 ChromaDB 知识库建起来后应改为从知识库取战术。
+- 报告中文/非 ASCII 字符会因 Helvetica 内置字体缺字形而显示异常，
+  真要支持需注册 CJK TTF 字体（当前系统输出均为英文，暂不影响）。

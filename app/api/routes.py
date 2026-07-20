@@ -236,24 +236,53 @@ def _state_from_event(e):
     persisted Event, so any event can be turned into a PDF on demand."""
     chain = AttackChain.query.get(e.chain_id) if e.chain_id else None
     block = BlockedIP.query.filter_by(event_id=e.id).first()
+
+    decision = (Decision.query.filter_by(event_id=e.id)
+                .order_by(Decision.id.desc()).first())
+    decided_by = decided_at = None
+    if decision:
+        user = User.query.get(decision.user_id) if decision.user_id else None
+        decided_by = user.full_name or user.username if user else "unknown analyst"
+        decided_at = decision.created_at.isoformat() if decision.created_at else None
+
+    stage_count = (chain.stage_count or len(chain.stages or [])) if chain else 0
+    if chain:
+        assessment = (
+            "Multiple kill chain phases observed from this source, indicating a "
+            "sustained and deliberate attack." if stage_count >= 3 else
+            "Two kill chain phases observed from this source." if stage_count == 2 else
+            "Single-phase activity. Limited attack scope observed."
+        )
+    else:
+        assessment = None
+
     return {
+        "event_id": e.id,
         "source_ip": e.source_ip, "dest_ip": e.dest_ip,
         "attack_type": e.attack_type, "rule": e.rule,
         "log_count": e.log_count, "risk": e.risk,
         "confidence": e.confidence, "severity": e.risk,
+        "first_seen": e.first_seen.isoformat() if e.first_seen else None,
+        "last_seen": e.last_seen.isoformat() if e.last_seen else None,
         "mitre_techniques": e.mitre_techniques or [],
         "llm_summary": e.llm_summary or {},
+        "raw_log_sample": e.raw_log_sample or [],
         "threat_intel": e.threat_intel or {},
         "asset": e.asset_info or {},
         "vulnerability": e.vuln_info or {},
-        "is_multistage": bool(chain and (chain.stage_count or 0) > 1),
+        "is_multistage": stage_count > 1,
+        "chain_id": e.chain_id,
         "chain_risk": chain.highest_risk if chain else None,
-        "chain_assessment": None,
+        "chain_assessment": assessment,
         "chain_stages": (chain.stages or []) if chain else [],
         "predicted_next": chain.predicted_next if chain else None,
         "action_taken": {"blocked": "blocked", "awaiting": "awaiting_approval",
                          "dismissed": "dismissed as false positive"}.get(e.status, "logged"),
         "blocked": bool(block and block.active),
+        "blocked_at": block.created_at.isoformat() if block and block.created_at else None,
+        "blocked_by": block.blocked_by if block else None,
+        "decided_by": decided_by,
+        "decided_at": decided_at,
     }
 
 
