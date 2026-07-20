@@ -447,3 +447,36 @@ SSH 规则是 **threshold 类型**，聚合字段是 `host.name`。这类告警�
   LOG 规则加 `--log-prefix "PORTSCAN "`，再用 nmap 扫描。
 - 规则的 `from: now-90s` 意味着只对新日志告警，历史日志不会补告警，
   所以改完规则后需要**重新发起攻击**才会产生告警。
+
+---
+
+## 2026-07-20 — 用真实工具打 DVWA 的攻击脚本（替代手写假 payload）
+
+### 做了什么
+
+新增 `lab/` 目录，用业界标准工具对隔离靶场 DVWA 产生六种真实攻击流量，
+让 ELK 检测规则命中真攻击而非手写假 payload：
+
+- `lab/attack_dvwa.sh`（Kali 端）：SQLi=sqlmap（真实 boolean/error/UNION 注入）、
+  XSS/CmdInj/FI=curl 发 DVWA 各模块真实 payload、SSH=hydra 爆破、Scan=nmap。
+  保留三攻击者 IP 的 aliasing（.104 SQLi+FI / .150 XSS+CmdInj / .151 SSH+Scan），
+  用单条 `ip route replace <target> src <alias>` 统一控制每一阶段所有工具的源 IP
+  （sqlmap/hydra/nmap -sT 都走 OS socket，无需各自的 source-bind 参数）。
+  含 DVWA 登录+降 security 到 low、私网地址安全校验、`--only`/`--yes` 参数、
+  退出时清理别名与路由。
+- `lab/target_setup.sh`（Target 端，跑一次）：加 iptables recent 模块规则，
+  对扫描式的 SYN 突发打 `--log-prefix "PORTSCAN "`，让 nmap 留痕；含持久化和
+  filebeat 采集 kern.log 的说明。
+- `lab/README_lab.md`：部署步骤 + 六条检测规则的推荐 KQL query。
+
+### 关键决策：规则匹配 URL 路径而非 payload 关键词
+
+Apache 访问日志里的 payload 是 URL 编码的，`UNION SELECT` 记为 `UNION%20SELECT`，
+ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不上。改为匹配
+`vulnerabilities/sqli` 等 URL 路径（日志里永远明文），配合 sqlmap 的真实注入流量，
+既稳定命中又不失真（此时匹配路径命中的确实是真攻击，不是页面访问）。
+
+### 验证
+
+- `bash -n` 两个脚本语法均通过。
+- 实际攻击需在 Kali/Target VM 上跑（本机无靶场，无法端到端执行）。
