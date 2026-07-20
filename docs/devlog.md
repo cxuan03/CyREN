@@ -351,3 +351,99 @@ chromadb/GraphRAG 无关**（那块只影响 MITRE 检索，静态 fallback 一�
 - 事件 #1 的 source_ip 存的是字面量 "unknown"，说明 siem_service 从那条
   Kibana 告警里没提取出源 IP，需要回头看该规则的日志格式（与本次无关）。
 - chromadb 仍不可用，MITRE 走静态 fallback 映射；GraphRAG 仍是 FYP2 增量。
+
+---
+
+## 2026-07-20 — SIEM 抓取三个问题：只有 3 种攻击 / 不再更新 / source_ip 是 unknown
+
+### 查到的原因
+
+直连实验环境的 ES 逐层排查，三个问题根因各不相同：
+
+**① 只有 3 种攻击类型 —— 不是 CyREN 的问题，是实验数据本身没有。**
+
+ES 里总共就只有 3 条规则产生过告警（SSH Brute Force 189 + Command Injection 66
++ File Inclusion 66 = 321，正好是 Kibana 里看到的 321 条）。CyREN 把存在的
+全部抓到了。六条规则都启用且运行正常（status=ok），但另外三条的 query
+与真实日志对不上：
+
+| 规则 | query 找的字符串 | filebeat 里的实际情况 |
+|---|---|---|
+| SQL Injection | `message: "UNION SELECT"` | 0 条。实际 SQLi 请求是 `GET /dvwa/vulnerabilities/sqli/?id=1&Submit=Submit` —— **只访问了页面，没发真实注入 payload** |
+| XSS Attack | `message: "script"` | 0 条。实际是 `GET /dvwa/vulnerabilities/xss_r/?name=John` —— **payload 是 "John" 不是 `<script>`** |
+| Port Scan | `message: "PORTSCAN"` | 0 条。filebeat 里没有任何 PORTSCAN / nmap / iptables / DPT= 日志 —— **端口扫描根本没有被记录** |
+
+而 Command Injection / File Inclusion 查的是 URL 路径（`vulnerabilities/exec`、
+`vulnerabilities/fi`），日志里有，所以能匹配；SSH 查 `Failed password`，
+auth.log 里有 5380 条。
+
+**② scheduler 抓一次后不再更新 —— 时间窗口滑过去了。**
+
+`FETCH_WINDOW_HOURS=24`，但所有告警都是 2026-07-18 的，当前是 07-20，
+全部超出窗口 → 每次查询返回 0 条。scheduler 线程一直在跑，只是查不到东西，
+且没有任何日志说明"这轮查到 0 条"，所以看起来像卡死了。
+
+**③ SSH Brute Force 的 source_ip 是 unknown —— threshold 规则不带原始字段。**
+
+SSH 规则是 **threshold 类型**，聚合字段是 `host.name`。这类告警只保留聚合键，
+文档里只有 `host.name: target-server`，**没有 message、没有 source.ip**，
+所以原来的两条提取路径（读 source.ip / 从 message 正则抠）都失败。
+而 Command Injection / File Inclusion 是 query 类型规则，告警会复制原始文档，
+带 message，正则兜底才成功。另外 filebeat 里 **0 条文档有 source.ip 字段**，
+日志没被解析成 ECS 字段，只有原始 message 文本。
+
+### 做了什么（CyREN 侧能修的两个半）
+
+1. **回查原始日志恢复攻击者 IP**（`_enrich_from_source_logs`）：告警没有源 IP 时，
+   用该规则自己的 query（`kibana.alert.rule.parameters.query`）到它自己的索引
+   （`filebeat*`）里、按告警的时间窗（`threshold_result.from` → `@timestamp`）
+   回查原始日志，取出现次数最多的 IP。按 (索引, query, 时间窗) 缓存，
+   每条规则每轮只查一次。
+   - 新增 `_FROM_IP_RE`：sshd 日志形如 `Failed password ... from 192.168.56.104 port 22`，
+     优先取 "from" 后面的地址，避免误取同行其他 IP。
+   - 回查到的真实日志同时作为事件的 `raw_logs`，报告里的 Raw Log Sample
+     从此有真实内容（之前 threshold 告警这里是空的）。
+2. **抓取窗口**：`FETCH_WINDOW_HOURS` 默认 24 → **168（7 天）**，实验数据不会
+   在两次实验之间静默滑出窗口。新增 `scripts/backfill_events.py --hours N`
+   回填更早的历史告警（支持 --dry-run / --force）。
+3. **scheduler 去重逻辑**（`_is_new_activity`）：原来只比较 `log_count` 是否增长。
+   滑动窗口下老告警会滑出、新告警滑入，log_count 可能持平甚至减少，
+   于是新活动被漏掉。现在 **log_count 增长 或 last_seen 时间推进** 都会重新分析。
+4. **让空转可见**：siem_service 每轮打印抓到多少告警、覆盖几条规则、
+   聚合成几个事件、有多少条恢复了 IP、还有多少条仍是 unknown；
+   ES 连不上或查询失败打 ERROR 日志（之前是 print 或静默）。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| 告警的 `kibana.alert.ancestors[].id` 查不到原始文档（返回 0 条） | 那是 threshold 规则合成的 ID 不是真实 _id；改用"规则 query + 时间窗"回查，实测能准确命中 auth.log 里的 5 条 Failed password |
+| 修好 IP 提取后，库里出现新旧两条 SSH 事件（unknown 一条、正确 IP 一条） | 写脚本删除 source_ip="unknown" 且已有正确替代的事件，连带清理其报告/决策/封禁记录 |
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- backfill dry-run：SSH Brute Force 的 source_ip 从 `unknown` 变成
+  **192.168.56.104**（与真实攻击者一致）。
+- 数据库现在 3 个事件，**IP 全部正确**：
+  File Inclusion / Command Injection / SSH Brute Force 均为 192.168.56.104。
+- scheduler 连续两轮 `_process_once` 均正常执行并正确跳过未变化的聚合
+  （输出 "3 aggregate(s) unchanged, skipped"），证明轮询没有卡死。
+- `_is_new_activity` 单元验证 5 种情况全部正确，包括原逻辑漏掉的
+  "日志数持平但 last_seen 推进" 和 "日志数减少但有新活动"。
+
+### 遗留（需要在实验环境侧处理，CyREN 无法凭空生成告警）
+
+要让六种攻击都进库（训练分类器需要），必须让那三条规则真正产生告警，二选一：
+
+- **改规则 query 匹配现有日志**（最快）：
+  - SQL Injection → `host.name: "target-server" AND message: "vulnerabilities/sqli"`
+  - XSS Attack → `host.name: "target-server" AND message: "vulnerabilities/xss_r"`
+  - 注意：这样只是"访问了漏洞页面"，不是真实注入，作为训练数据标签偏弱。
+- **重放带真实 payload 的攻击**（更符合 FYP 论述，推荐）：
+  从 Kali 发真正的注入请求（URL 编码的 `' UNION SELECT ...`、`<script>alert(1)</script>`），
+  并保持规则 query 不变或改为匹配编码后的特征。
+- **Port Scan** 两种做法都需要先让扫描留下日志：在 target 上配 iptables
+  LOG 规则加 `--log-prefix "PORTSCAN "`，再用 nmap 扫描。
+- 规则的 `from: now-90s` 意味着只对新日志告警，历史日志不会补告警，
+  所以改完规则后需要**重新发起攻击**才会产生告警。

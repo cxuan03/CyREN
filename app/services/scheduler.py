@@ -20,6 +20,23 @@ from datetime import datetime
 from config.settings import settings
 
 
+def _is_new_activity(existing, event) -> bool:
+    """Should this aggregate be (re)analysed?
+
+    Reprocess when more raw logs folded in *or* when the aggregate now
+    extends past what we last saw. Comparing log_count alone is not enough:
+    the fetch window slides, so old alerts age out as new ones arrive and the
+    count can stay flat or even shrink while genuinely new activity happened.
+    """
+    if existing is None:
+        return True
+    if (event.get("log_count") or 0) > (existing.log_count or 0):
+        return True
+    last_seen = (event.get("last_seen") or "").replace("T", " ")[:19]
+    known = existing.last_seen.isoformat().replace("T", " ")[:19] if existing.last_seen else ""
+    return bool(last_seen and last_seen > known)
+
+
 def _process_once(app) -> int:
     """One polling cycle; returns how many events were (re)analysed."""
     from app.agents.pipeline import run_pipeline
@@ -30,14 +47,15 @@ def _process_once(app) -> int:
     processed = 0
     with app.app_context():
         events = siem_service.fetch_aggregated_events()
+        skipped = 0
         for event in events:
             existing = (Event.query
                         .filter_by(source_ip=event.get("source_ip"), rule=event.get("rule"))
                         .filter(Event.status != "dismissed")
                         .order_by(Event.id.desc())
                         .first())
-            # nothing new folded into this aggregate since last run -> skip
-            if existing is not None and (existing.log_count or 0) >= event.get("log_count", 0):
+            if not _is_new_activity(existing, event):
+                skipped += 1
                 continue
 
             print(f"[scheduler] analysing {event.get('rule')} from "
@@ -45,6 +63,8 @@ def _process_once(app) -> int:
             state = run_pipeline(event)
             persist_pipeline_result(state)
             processed += 1
+        if skipped:
+            print(f"[scheduler] {skipped} aggregate(s) unchanged, skipped")
     return processed
 
 

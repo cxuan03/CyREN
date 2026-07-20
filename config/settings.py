@@ -36,7 +36,11 @@ class Settings:
     ELASTICSEARCH_USER = os.getenv("ELASTICSEARCH_USER", "elastic")
     ELASTICSEARCH_PASSWORD = os.getenv("ELASTICSEARCH_PASSWORD", "")
     ELASTIC_ALERT_INDEX = os.getenv("ELASTIC_ALERT_INDEX", ".alerts-security.alerts-default")
-    FETCH_WINDOW_HOURS = int(os.getenv("FETCH_WINDOW_HOURS", "24") or 24)
+    # How far back each poll looks. Lab alerts are generated in bursts and
+    # then sit idle for days, so a 24h window silently goes empty between
+    # sessions; a week keeps the whole experiment in view. Use
+    # scripts/backfill_events.py for anything older.
+    FETCH_WINDOW_HOURS = int(os.getenv("FETCH_WINDOW_HOURS", "168") or 168)
 
     # ---- Background pipeline scheduler ----
     ENABLE_SCHEDULER = _bool("ENABLE_SCHEDULER", False)
