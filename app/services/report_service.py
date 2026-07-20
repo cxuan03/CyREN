@@ -27,6 +27,12 @@ except ImportError:
     _canvas = None
 
 # ----------------------------------------------------------------- constants
+# Stamped into every generated filename. Bump this whenever the layout or the
+# content of the report changes: callers compare it against the stored
+# file_path and regenerate anything produced by an older version, so reports
+# on disk never lag behind the current design.
+REPORT_FORMAT_VERSION = "v2"
+
 PAGE_W, PAGE_H = 595, 842          # A4 in points
 MARGIN = 45
 CONTENT_W = PAGE_W - 2 * MARGIN
@@ -192,10 +198,13 @@ class _Doc:
         self.y -= h
 
     # -- blocks ----------------------------------------------------------
-    def section(self, title):
-        # reserve room for the bar plus the first rows so a heading never
-        # ends up stranded alone at the foot of a page
-        self.need(92)
+    def section(self, title, keep=0):
+        # Reserve room for the bar plus the block that follows it, so a
+        # heading never ends up stranded at the foot of a page while its
+        # content starts on the next one. `keep` is the caller's estimate of
+        # that block's height; it is capped so an oversized block (which will
+        # paginate internally anyway) does not force a needless break.
+        self.need(min(max(92, 30 + keep), self._usable_height()))
         self.space(6)
         c = self.c
         c.setFillColorRGB(*NAVY)
@@ -205,13 +214,44 @@ class _Doc:
         c.drawString(MARGIN + 10, self.y - 11, title.upper())
         self.y -= 30
 
+    def caption(self, text):
+        """Small muted line, e.g. above a table or a code box."""
+        self.need(16)
+        self.c.setFillColorRGB(*MUTED)
+        self.c.setFont("Helvetica", 8)
+        self.c.drawString(MARGIN, self.y - 8, str(text))
+        self.y -= 16
+
+    def _usable_height(self):
+        """How much vertical room a block gets on a fresh (non-first) page."""
+        return (PAGE_H - HEADER_H - 16) - (FOOTER_H + 20)
+
+    def keep_together(self, height):
+        """Move to a new page if `height` does not fit here but would fit
+        on a fresh page, so short blocks are not split across pages."""
+        if self.y - height < FOOTER_H + 20 and height <= self._usable_height():
+            self._new_page()
+
+    @staticmethod
+    def _prep_kv(rows):
+        prepared = []
+        for label, value in rows:
+            text = "—" if value in (None, "") else str(value)
+            lines = textwrap.wrap(text, width=62) or ["—"]
+            prepared.append((label, lines, max(18, 4 + len(lines) * 12)))
+        return prepared
+
+    def kv_height(self, rows):
+        """Height a kv_table will occupy, for section() to reserve up front."""
+        return sum(h for _, _, h in self._prep_kv(rows)) + 4
+
     def kv_table(self, rows, label_w=150):
         """Two-column label/value table with a shaded label column."""
         c = self.c
-        for i, (label, value) in enumerate(rows):
-            text = "—" if value in (None, "") else str(value)
-            lines = textwrap.wrap(text, width=62) or ["—"]
-            h = max(18, 4 + len(lines) * 12)
+        prepared = self._prep_kv(rows)
+        self.keep_together(sum(h for _, _, h in prepared) + 4)
+
+        for i, (label, lines, h) in enumerate(prepared):
             self.need(h + 4)
             top = self.y
 
@@ -237,6 +277,8 @@ class _Doc:
     def data_table(self, headers, rows, widths):
         """Multi-column table with a navy header row."""
         c = self.c
+        # rough height estimate so a short table is not split across pages
+        self.keep_together(17 + max(len(rows), 1) * 18 + 4)
         self.need(34)
         c.setFillColorRGB(*NAVY)
         c.rect(MARGIN, self.y - 17, CONTENT_W, 17, stroke=0, fill=1)
@@ -350,7 +392,14 @@ class _Doc:
         c.setStrokeColorRGB(*INK)
         c.setLineWidth(1)
         c.rect(MARGIN, bar_y, CONTENT_W, 12, stroke=1, fill=0)
-        self.y = bar_y - 12
+
+        # same sentence the dashboard shows under the confidence bar
+        note = (f"The XGBoost classifier scored this event at {_fmt_conf(confidence)} "
+                f"confidence, which falls in the \"{risk or 'unknown'}\" tier.")
+        c.setFillColorRGB(*MUTED)
+        c.setFont("Helvetica", 8)
+        c.drawString(MARGIN, bar_y - 14, note)
+        self.y = bar_y - 26
 
     def code_box(self, lines, max_lines=12):
         """Monospace sample on a tinted background."""
@@ -362,6 +411,7 @@ class _Doc:
 
         rows = [ln if len(ln) <= 104 else ln[:101] + "..." for ln in shown]
         h = 14 + len(rows) * 10.5 + (12 if extra else 0)
+        self.keep_together(h + 6)
         self.need(h + 6)
         top = self.y
 
@@ -387,8 +437,7 @@ def _render(c, state, total_pages=None):
     d = _Doc(c, state, total_pages)
 
     # 1. Alert details -----------------------------------------------------
-    d.section("Alert Details")
-    d.kv_table([
+    alert_rows = [
         ("Event ID", f"#{state['event_id']}" if state.get("event_id") else "pending"),
         ("Attack Type", state.get("attack_type")),
         ("Detection Rule", state.get("rule")),
@@ -397,10 +446,12 @@ def _render(c, state, total_pages=None):
         ("Aggregated Logs", state.get("log_count")),
         ("First Seen", _fmt_ts(state.get("first_seen"))),
         ("Last Seen", _fmt_ts(state.get("last_seen"))),
-    ])
+    ]
+    d.section("Alert Details", keep=d.kv_height(alert_rows))
+    d.kv_table(alert_rows)
 
     # 2. Classification ----------------------------------------------------
-    d.section("Threat Classification (XGBoost)")
+    d.section("Threat Classification (XGBoost)", keep=70)
     d.confidence_bar(state.get("confidence"), state.get("risk"))
 
     # 3. AI analysis -------------------------------------------------------
@@ -416,16 +467,16 @@ def _render(c, state, total_pages=None):
                    pill=(urgency.upper(), fill, text))
 
     # 4. MITRE -------------------------------------------------------------
-    d.section("MITRE ATT&CK Techniques")
     rows = []
     for entry in state.get("mitre_techniques") or []:
         tid, name = _split_technique(entry)
         rows.append((tid, name, _tactic_for(tid)))
+    d.section("MITRE ATT&CK Techniques", keep=17 + max(len(rows), 1) * 18 + 4)
     d.data_table(["Technique ID", "Technique", "Tactic"], rows, [95, 260, 150])
 
     # 5. Attack chain ------------------------------------------------------
     if state.get("is_multistage") or state.get("chain_stages"):
-        d.section("Attack Chain")
+        d.section("Attack Chain", keep=64)
         chain_risk = str(state.get("chain_risk") or "").lower()
         fill, text = RISK_COLORS.get(
             {"critical": "high", "medium": "uncertain"}.get(chain_risk, chain_risk),
@@ -446,49 +497,68 @@ def _render(c, state, total_pages=None):
                        f"{state['predicted_next']}.")
 
     # 6. Enrichment --------------------------------------------------------
-    d.section("Context & Enrichment")
     ti = state.get("threat_intel") or {}
     asset = state.get("asset") or {}
     vuln = state.get("vulnerability") or {}
     cves = vuln.get("matching_cves")
     if isinstance(cves, (list, tuple)):
         cves = ", ".join(str(x) for x in cves)
-    d.kv_table([
+    context_rows = [
         ("Source Reputation",
          f"known bad: {ti.get('known_bad', 'unknown')}  |  score: {ti.get('score', 'n/a')}"
          f"  |  sources: {ti.get('sources') or 'none'}"),
         ("Target Asset",
          f"{asset.get('name', 'unknown')} (criticality: {asset.get('criticality', 'unknown')})"),
         ("Matching CVEs", cves or "None known"),
-    ])
+    ]
+    d.section("Context & Enrichment", keep=d.kv_height(context_rows))
+    d.kv_table(context_rows)
 
     # 7. Raw logs ----------------------------------------------------------
-    d.section("Raw Log Sample")
-    d.code_box(state.get("raw_log_sample") or state.get("raw_logs") or [])
+    sample = state.get("raw_log_sample") or state.get("raw_logs") or []
+    d.section("Raw Log Sample", keep=16 + 14 + min(len(sample) or 1, 12) * 11)
+    if sample:
+        d.caption(f"Showing {min(len(sample), 12)} of {state.get('log_count') or len(sample)} "
+                  f"aggregated log lines.")
+    d.code_box(sample)
 
     # 8. Response ----------------------------------------------------------
-    d.section("Response Actions")
+    action = state.get("action_taken")
+    ip = state.get("source_ip") or "the source address"
+    if action == "blocked":
+        note = f"IP blocked. A firewall rule is dropping all traffic from {ip}."
+    elif action == "awaiting_approval":
+        note = "Waiting for an analyst decision. Nothing has been blocked yet."
+    elif action and action.startswith("dismissed"):
+        note = "Dismissed as a false positive by an analyst."
+    else:
+        note = "Logged. The system judged this low risk; no blocking action was taken."
+
     if state.get("decided_by"):
         approver = f"{state['decided_by']} (analyst decision)"
-    elif state.get("blocked_by") == "auto" or state.get("action_taken") == "blocked":
+    elif state.get("blocked_by") == "auto" or action == "blocked":
         approver = "Automatic (policy: high risk auto-block)"
     else:
         approver = "No analyst decision recorded"
-    d.kv_table([
-        ("Action Taken", str(state.get("action_taken") or "logged").replace("_", " ")),
+
+    response_rows = [
+        ("Action Taken", str(action or "logged").replace("_", " ")),
         ("Source IP Blocked", "Yes" if state.get("blocked") else "No"),
         ("Blocked At", _fmt_ts(state.get("blocked_at"), "—")),
         ("Decided By", approver),
         ("Decision Time", _fmt_ts(state.get("decided_at"), "—")),
-        ("Notification", "Email sent to the SOC team"
-                         if state.get("action_taken") == "blocked" else "Not sent"),
-    ])
+        ("Notification", "Email sent to the SOC team" if action == "blocked" else "Not sent"),
+    ]
+    d.section("Response Actions", keep=16 + d.kv_height(response_rows))
+    d.caption(note)
+    d.kv_table(response_rows)
 
 
 def generate_report(state: dict) -> str:
     os.makedirs(settings.REPORT_OUTPUT_DIR, exist_ok=True)
     ts = datetime.utcnow().strftime("%Y-%m-%d_%H%M%S")
-    filename = f"CyREN_Incident_{state.get('source_ip','unknown')}_{ts}.pdf"
+    filename = (f"CyREN_Incident_{state.get('source_ip','unknown')}_{ts}"
+                f"_{REPORT_FORMAT_VERSION}.pdf")
     path = os.path.join(settings.REPORT_OUTPUT_DIR, filename)
 
     if _canvas is None:

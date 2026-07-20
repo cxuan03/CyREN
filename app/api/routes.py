@@ -287,13 +287,21 @@ def _state_from_event(e):
 
 
 def _ensure_report(event):
-    """Return an existing on-disk report for this event, or generate one."""
+    """Return this event's report, regenerating it when missing or outdated.
+
+    A report is reused only if the file is still on disk *and* was produced by
+    the current report format; otherwise it is rebuilt, so a redesign of the
+    PDF reaches events that were reported on by an earlier version.
+    """
+    from app.services.report_service import generate_report, REPORT_FORMAT_VERSION
+
     rep = (Report.query.filter_by(event_id=event.id)
            .order_by(Report.id.desc()).first())
-    if rep and _report_path(rep):
-        return rep
+    if rep:
+        existing = _report_path(rep)
+        if existing and f"_{REPORT_FORMAT_VERSION}." in os.path.basename(existing):
+            return rep
 
-    from app.services.report_service import generate_report
     path = generate_report(_state_from_event(event))
     resolution = {"blocked": "auto_blocked", "awaiting": "awaiting_approval",
                   "dismissed": "dismissed"}.get(event.status, "logged")

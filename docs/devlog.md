@@ -249,3 +249,44 @@
   等 ChromaDB 知识库建起来后应改为从知识库取战术。
 - 报告中文/非 ASCII 字符会因 Helvetica 内置字体缺字形而显示异常，
   真要支持需注册 CJK TTF 字体（当前系统输出均为英文，暂不影响）。
+
+---
+
+## 2026-07-20 — 修旧报告不更新 + 报告内容与详情页对齐 + 分页保持
+
+### 做了什么
+
+用户反馈 Reports 页里第 1、3 条打开还是旧版排版，只有第 2 条是新版。
+
+1. **报告格式版本号**：`report_service.REPORT_FORMAT_VERSION = "v2"`，
+   写进生成的文件名（`..._v2.pdf`）。`_ensure_report()` 改为
+   "文件在磁盘上**且**文件名带当前版本号"才复用，否则重新生成。
+   以后再改版式只要 bump 这个常量，所有旧报告自动重出。
+2. **内容与 Incident Details 页对齐**（用户要求报告内容和详情页一致）：
+   - 置信度条下方补上详情页那句
+     `The XGBoost classifier scored this event at X% confidence, which falls in the "Y" tier.`
+   - Raw Log Sample 上方补 `Showing N of M aggregated log lines.`
+   - Response Actions 上方补详情页的状态说明（IP blocked / Waiting for an
+     analyst decision / Dismissed as a false positive / Logged）。
+   - 新增 `caption()` 排版原语承载这些说明文字。
+3. **分页保持**：新增 `keep_together(height)` 与 `kv_height(rows)`，
+   `section(title, keep=...)` 可预知后续内容高度。短表格、代码框不再被
+   拆到两页，区块标题也不会与内容分离。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| 旧报告文件还在磁盘上就被复用，改了版式也不生效 | 文件名带格式版本号，`_ensure_report()` 比对版本，不符就重新生成 |
+| Response Actions 6 行表格被拆成"页 2 四行 + 页 3 两行"，页 3 几乎全空 | `kv_table()` 先算总高，放不下且能放进新页就整体挪过去 |
+| 修完上一条后变成"标题条留在页 2、表格跑到页 3" | `section()` 增加 `keep` 参数接收后续内容高度估算，标题与内容一起搬；上限取单页可用高度，避免超长内容反而空一页 |
+
+### 验证结果
+
+- `pytest` 5 个全过；报告 API 冒烟全过；日期时间过滤 6 种组合仍全部正确。
+- 新增陈旧报告冒烟：预置一个无版本号的旧文件 → 访问 preview 后
+  `file_path` 变成 `..._v2.pdf`（已重新生成），再次访问复用不重复生成，
+  Report 行数保持 1。
+- 逐页肉眼复核：完整样本 3 页，三处新增说明文字就位，
+  Response Actions 标题+说明+6 行表格完整同页；稀疏样本仍优雅降级。
+- 样张已更新：`docs/sample/sample_incident_report.pdf`。
