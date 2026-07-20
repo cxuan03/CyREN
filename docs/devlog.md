@@ -76,3 +76,70 @@
 - test client 冒烟（两个不同日期的种子事件）：无参=2 条；只选 19 号=1 条；
   只选 12 号=1 条；from=13 号=只剩 19 号那条；from>to 返回 400；
   非法日期返回 400。
+
+---
+
+## 2026-07-19 — 全部页面接真：Events/Approval/Detail/Chain/Blocked/Reports/Users/Profile
+
+### 做了什么
+
+**新后端接口**（routes.py / auth.py）：
+
+- `GET /api/reports/<id>/download`（附件下载）与 `/preview`（inline，浏览器直接渲染 PDF）；
+  file_path 相对路径按项目根解析，文件不存在返回 404。
+- `POST /api/change-password`（验证当前密码 + 密码策略）、
+  `POST /api/verify-password`（敏感操作前二次验证）、
+  `POST /api/profile`（改姓名/邮箱）。
+- `POST /api/users`（manager 专用建号）、`PATCH /api/users/<id>`
+  （改名/改角色/启停用，禁止停用自己）。
+- `POST /api/blocked`（手动封 IP：IPv4 校验、去重 409、联动 response_agent）。
+- `GET /api/me/activity`（当前用户的决策统计 + 最近决策，带事件 IP）。
+
+**前端全部接真**（index.html，静态假行全部删除）：
+
+- All Events：真数据表格 + 风险 chips 计数 + 攻击类型下拉（按数据生成）+
+  risk/status/IP/日期过滤（调 API）+ 客户端分页（Rows 选择器 + 页码）+
+  Export CSV（真导出当前结果）+ 行点击进详情。
+- Event Detail：按事件 id 拉取渲染全部字段（信息卡、置信度条、MITRE、
+  LLM 三段分析、raw log 样本）；Response 区按状态渲染真按钮——
+  awaiting 可 Block/Dismiss（POST decision）、blocked 可 Unblock/标记误报；
+  Export PDF 按钮找到该事件的报告才可用，点击真下载。
+- Human Approval：真 awaiting 列表 + 等待时长 + 行内 View/Block/Dismiss。
+- Attack Chain：链列表接 /api/chains；链视图动态生成 SVG 节点图
+  （按 stage 交错布局、绿→黄→红渐进、预测节点虚线）+ 时间线表。
+- Firewall Blocks：真封禁列表 + Unblock + Add Block（prompt 输 IP）+
+  Active blocks 表和 iptables 原始输出按数据生成 + 搜索。
+- Incident Reports：改成和其他 tab 一致的表格（Report#/攻击/风险/处置/时间），
+  每行 Preview（iframe 内嵌浏览器原生 PDF 预览）+ Download；
+  假的"Generate Report"按钮和写死的纸质预览删除。
+- User Management：真用户表（manager 可见，analyst 显示提示）；
+  Add User / Edit（改名改角色）/ Disable/Enable 全部接 API，不能停用自己。
+- My Profile：资料回填 + Save 真保存；Change Password 真改密码
+  （前后端双重策略校验）；Your Activity 接 /api/me/activity；
+  Login History 显示真实 last_login。
+- Settings：阈值解锁的身份验证改为真调 /api/verify-password
+  （写死的 password123 删除）；Buddy 气泡点击跳转到触发它的真实事件详情。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| Report.file_path 生成时是相对路径，直接 send_file 会因工作目录不同 404 | 下载/预览前按项目根目录解析为绝对路径再校验存在 |
+| 旧 openEvent(fake) 被 Buddy 和多处静态行引用 | 统一换成 openEventDetail(id)；Buddy 记录触发事件 id，点气泡直达该事件 |
+| manager 停用自己会把自己锁死 | PATCH is_active 时后端拒绝 self-disable（400），前端也不渲染按钮 |
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- 全量 test client 冒烟：报告下载（Content-Disposition attachment）与预览
+  （application/pdf）200；verify-password 错 401 对 200；改密码错当前密码/弱
+  密码 400、成功后旧密码失效新密码可登录；profile 更新生效；analyst 访问
+  /api/users 403；手动封禁 201、重复 409、非法 IP 400、解封 200；approve
+  决策后事件变 blocked；activity 计数与 IP 正确；manager 建号 201、改角色、
+  停用、self-disable 400。
+
+### 遗留
+
+- Settings 页的阈值数值、Email 通知、模型重训、Agent 开关仍是演示 UI，
+  没有后端持久化（需要新增配置表并接入 triage 路由，另开任务）。
+- All Events 的批量勾选框无批量操作；报告无批量导出。

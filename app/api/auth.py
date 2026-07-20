@@ -78,3 +78,40 @@ def login():
 def logout():
     logout_user()
     return jsonify({"ok": True})
+
+
+@auth.post("/api/change-password")
+@login_required
+def change_password():
+    data = request.get_json(force=True)
+    if not current_user.check_password(data.get("current_password") or ""):
+        return jsonify({"ok": False, "error": "current password is incorrect"}), 400
+    new = data.get("new_password") or ""
+    if not _password_ok(new):
+        return jsonify({"ok": False, "error": PASSWORD_RULE}), 400
+    current_user.set_password(new)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@auth.post("/api/verify-password")
+@login_required
+def verify_password():
+    """Re-authenticate before sensitive actions (e.g. unlocking thresholds)."""
+    data = request.get_json(force=True)
+    if current_user.check_password(data.get("password") or ""):
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "wrong password"}), 401
+
+
+@auth.post("/api/profile")
+@login_required
+def update_profile():
+    data = request.get_json(force=True)
+    full_name = (data.get("full_name") or "").strip()
+    if not full_name:
+        return jsonify({"ok": False, "error": "full name is required"}), 400
+    current_user.full_name = full_name
+    current_user.email = (data.get("email") or "").strip()
+    db.session.commit()
+    return jsonify({"ok": True, "user": current_user.to_dict()})

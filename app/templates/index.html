@@ -662,15 +662,15 @@
                 </div>
               </div>
               <div class="col-md-3">
-                <label class="form-label small mb-1">IP Range</label>
-                <input type="text" class="form-control" placeholder="192.168.56.0/24">
+                <label class="form-label small mb-1">IP Contains</label>
+                <input type="text" class="form-control" id="alertsIp" placeholder="192.168.56.">
               </div>
               <div class="col-md-4">
                 <label class="form-label small mb-1">Date Range</label>
                 <div class="input-group">
-                  <input type="date" class="form-control">
+                  <input type="date" class="form-control" id="alertsFrom">
                   <span class="input-group-text">to</span>
-                  <input type="date" class="form-control">
+                  <input type="date" class="form-control" id="alertsTo">
                 </div>
               </div>
             </div>
@@ -678,39 +678,33 @@
             <div class="row g-2 align-items-end">
               <div class="col-md-3">
                 <label class="form-label small mb-1">Risk Level</label>
-                <select class="form-select">
-                  <option>All Risk Levels</option>
-                  <option>High Risk</option>
-                  <option>Uncertain</option>
-                  <option>Low Risk</option>
+                <select class="form-select" id="alertsRisk">
+                  <option value="">All Risk Levels</option>
+                  <option value="high">High Risk</option>
+                  <option value="uncertain">Uncertain</option>
+                  <option value="low">Low Risk</option>
                 </select>
               </div>
               <div class="col-md-3">
                 <label class="form-label small mb-1">Attack Type</label>
-                <select class="form-select">
-                  <option>All Attack Types</option>
-                  <option>SQL Injection</option>
-                  <option>Cross-Site Scripting</option>
-                  <option>Command Injection</option>
-                  <option>File Inclusion</option>
-                  <option>SSH Brute Force</option>
-                  <option>Port Scanning</option>
-                  <option>Unclassified</option>
+                <select class="form-select" id="alertsType">
+                  <option value="">All Attack Types</option>
                 </select>
               </div>
               <div class="col-md-3">
                 <label class="form-label small mb-1">Status</label>
-                <select class="form-select">
-                  <option>All Status</option>
-                  <option>Blocked</option>
-                  <option>Awaiting Approval</option>
-                  <option>Logged</option>
-                  <option>Dismissed</option>
+                <select class="form-select" id="alertsStatus">
+                  <option value="">All Status</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="awaiting">Awaiting Approval</option>
+                  <option value="logged">Logged</option>
+                  <option value="dismissed">Dismissed</option>
+                  <option value="new">New</option>
                 </select>
               </div>
               <div class="col-md-3 d-flex gap-2">
-                <button class="btn btn-primary flex-grow-1">Apply</button>
-                <button class="btn btn-outline-secondary">Reset</button>
+                <button class="btn btn-primary flex-grow-1" onclick="loadAlerts()">Apply</button>
+                <button class="btn btn-outline-secondary" onclick="resetAlertsFilters()">Reset</button>
               </div>
             </div>
 
@@ -719,17 +713,17 @@
 
         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
           <div class="d-flex gap-2 flex-wrap">
-            <span class="chip active">All <b>12</b></span>
-            <span class="chip chip-hi">High <b>3</b></span>
-            <span class="chip chip-un">Uncertain <b>5</b></span>
-            <span class="chip chip-lo">Low <b>4</b></span>
+            <span class="chip active">All <b id="chipAllN">0</b></span>
+            <span class="chip chip-hi">High <b id="chipHiN">0</b></span>
+            <span class="chip chip-un">Uncertain <b id="chipUnN">0</b></span>
+            <span class="chip chip-lo">Low <b id="chipLoN">0</b></span>
           </div>
           <div class="d-flex align-items-center gap-2">
             <span class="small fw-bold">Rows</span>
-            <select class="form-select form-select-sm" style="width:auto">
+            <select class="form-select form-select-sm" style="width:auto" id="alertsRows" onchange="renderAlerts(1)">
               <option>25</option><option>50</option><option>100</option>
             </select>
-            <button class="btn btn-sm btn-outline-secondary">
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportAlertsCsv()">
               <i class="bi bi-download"></i> Export CSV
             </button>
           </div>
@@ -750,53 +744,8 @@
                   <th>Status</th>
                 </tr>
               </thead>
-              <tbody>
-<tr style="cursor:pointer" onclick="openEvent('alerts','high','done')">
-                  <td><input type="checkbox"></td>
-                  <td><span class="badge bg-danger">High</span></td>
-                  <td>SQL Injection</td>
-                  <td><code>192.168.56.102</code></td>
-                  <td>312</td>
-                  <td><div class="conf-mini"><div style="width:93%;background:#ff5252"></div></div>93%</td>
-                  <td><small>2026-07-12 14:02:11</small></td>
-                  <td><span class="text-danger fw-bold">Blocked</span></td>
-                </tr><tr style="cursor:pointer" onclick="openEvent('alerts','high','done')">
-                  <td><input type="checkbox"></td>
-                  <td><span class="badge bg-danger">High</span></td>
-                  <td>Command Injection</td>
-                  <td><code>192.168.56.102</code></td>
-                  <td>44</td>
-                  <td><div class="conf-mini"><div style="width:93%;background:#ff5252"></div></div>93%</td>
-                  <td><small>2026-07-12 14:11:29</small></td>
-                  <td><span class="text-danger fw-bold">Blocked</span></td>
-                </tr><tr style="cursor:pointer" onclick="openEvent('alerts','high','done')">
-                  <td><input type="checkbox"></td>
-                  <td><span class="badge bg-danger">High</span></td>
-                  <td>SQL Injection</td>
-                  <td><code>192.168.56.107</code></td>
-                  <td>198</td>
-                  <td><div class="conf-mini"><div style="width:91%;background:#ff5252"></div></div>91%</td>
-                  <td><small>2026-07-12 13:22:47</small></td>
-                  <td><span class="text-danger fw-bold">Blocked</span></td>
-                </tr><tr style="cursor:pointer" onclick="go('approve')">
-                  <td><input type="checkbox"></td>
-                  <td><span class="badge bg-warning text-dark">Uncertain</span></td>
-                  <td>SSH Brute Force</td>
-                  <td><code>192.168.56.103</code></td>
-                  <td>58</td>
-                  <td><div class="conf-mini"><div style="width:61%;background:#ffd60a"></div></div>0.61</td>
-                  <td><small>2026-07-12 14:01:47</small></td>
-                  <td><span class="fw-bold" style="color:#8a6d00">Awaiting</span></td>
-                </tr><tr style="cursor:pointer" onclick="go('approve')">
-                  <td><input type="checkbox"></td>
-                  <td><span class="badge bg-warning text-dark">Uncertain</span></td>
-                  <td>Cross-Site Scripting</td>
-                  <td><code>192.168.56.104</code></td>
-                  <td>17</td>
-                  <td><div class="conf-mini"><div style="width:54%;background:#ffd60a"></div></div>0.54</td>
-                  <td><small>2026-07-12 13:47:02</small></td>
-                  <td><span class="fw-bold" style="color:#8a6d00">Awaiting</span></td>
-                </tr>
+              <tbody id="alertsBody">
+                <tr><td colspan="8" class="text-muted small text-center py-3">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -805,9 +754,9 @@
         <div class="card">
           <div class="card-body d-flex justify-content-end align-items-center flex-wrap gap-2">
             <div class="d-flex align-items-center gap-3">
-              <span class="small fw-bold">Showing 1&ndash;5 of 12</span>
+              <span class="small fw-bold" id="alertsShowing">Showing 0 of 0</span>
               <nav>
-                <ul class="pagination mb-0"><li class="page-item disabled"><a class="page-link">&laquo;</a></li><li class="page-item active"><a class="page-link">1</a></li><li class="page-item"><a class="page-link">2</a></li><li class="page-item"><a class="page-link">&raquo;</a></li></ul>
+                <ul class="pagination mb-0" id="alertsPager"></ul>
               </nav>
             </div>
           </div>
@@ -828,11 +777,8 @@
         <div class="card mb-3">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-3">
-              <h5 class="mb-0">
-                SQL Injection
-                <span class="badge bg-danger ms-2">High Risk</span>
-              </h5>
-              <button class="btn btn-outline-danger" onclick="go('reports')">
+              <h5 class="mb-0" id="dTitle">&ndash;</h5>
+              <button class="btn btn-outline-danger" id="dPdfBtn" onclick="downloadEventReport()">
                 <i class="bi bi-file-earmark-pdf"></i> Export PDF
               </button>
             </div>
@@ -842,7 +788,7 @@
                 <div class="card card-blue">
                   <div class="card-body py-2">
                     <div class="text-muted small">Event ID</div>
-                    <div>#42</div>
+                    <div id="dId">&ndash;</div>
                   </div>
                 </div>
               </div>
@@ -850,7 +796,7 @@
                 <div class="card card-blue">
                   <div class="card-body py-2">
                     <div class="text-muted small">Source IP</div>
-                    <div><code>192.168.56.102</code></div>
+                    <div><code id="dIp">&ndash;</code></div>
                   </div>
                 </div>
               </div>
@@ -858,7 +804,7 @@
                 <div class="card card-blue">
                   <div class="card-body py-2">
                     <div class="text-muted small">Destination IP</div>
-                    <div><code>192.168.56.10</code></div>
+                    <div><code id="dDest">&ndash;</code></div>
                     <div class="text-muted" style="font-size:.7rem">Target Server (DVWA)</div>
                   </div>
                 </div>
@@ -867,7 +813,7 @@
                 <div class="card card-blue">
                   <div class="card-body py-2">
                     <div class="text-muted small">Number of Logs</div>
-                    <div>312</div>
+                    <div id="dLogs">&ndash;</div>
                   </div>
                 </div>
               </div>
@@ -875,8 +821,8 @@
                 <div class="card card-blue">
                   <div class="card-body py-2">
                     <div class="text-muted small">Date and Time</div>
-                    <div>12 Jul 2026</div>
-                    <div class="text-muted" style="font-size:.7rem">14:02 to 14:09</div>
+                    <div id="dDate">&ndash;</div>
+                    <div class="text-muted" style="font-size:.7rem" id="dTime"></div>
                   </div>
                 </div>
               </div>
@@ -894,7 +840,7 @@
                     <div class="card card-blue">
                       <div class="card-body py-2">
                         <div class="text-muted small">Result</div>
-                        <div class="text-danger fw-semibold">True Positive</div>
+                        <div class="fw-semibold" id="dResult">&ndash;</div>
                       </div>
                     </div>
                   </div>
@@ -902,16 +848,13 @@
                     <div class="card card-blue">
                       <div class="card-body py-2">
                         <div class="text-muted small">Confidence Level</div>
-                        <div class="conf-bar"><div class="conf-fill" style="width:93%;background:#ff5252"></div></div>
-                        <div class="conf-lbl">93% &nbsp;<span class="text-muted">High</span></div>
+                        <div class="conf-bar"><div class="conf-fill" id="dConfFill" style="width:0%"></div></div>
+                        <div class="conf-lbl" id="dConfLbl">&ndash;</div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <p class="text-muted small mb-0">
-                  The model classified this as a real attack because of the unusually high
-                  request rate and the suspicious characters found in the request.
-                </p>
+                <p class="text-muted small mb-0" id="dClassNote"></p>
               </div>
             </div>
           </div>
@@ -919,25 +862,8 @@
           <div class="col-md-6">
             <div class="card h-100">
               <div class="card-header card-header-navy">Matching Attack Techniques (MITRE ATT&amp;CK)</div>
-              <div class="card-body">
-                <div class="card card-blue mb-2">
-                  <div class="card-body py-2">
-                    <div>
-                      <span class="badge bg-primary">T1190</span>
-                      <strong class="ms-1">Exploit Public-Facing Application</strong>
-                    </div>
-                    <div class="text-muted small mt-1">Tactic: Initial Access</div>
-                  </div>
-                </div>
-                <div class="card card-blue">
-                  <div class="card-body py-2">
-                    <div>
-                      <span class="badge bg-secondary">T1505.003</span>
-                      <strong class="ms-1">Web Shell</strong>
-                    </div>
-                    <div class="text-muted small mt-1">Tactic: Persistence</div>
-                  </div>
-                </div>
+              <div class="card-body" id="dMitre">
+                <p class="text-muted small mb-0">No techniques matched.</p>
               </div>
             </div>
           </div>
@@ -949,26 +875,21 @@
             <div class="card card-blue mb-3">
               <div class="card-body">
                 <h6>What Happened</h6>
-                <p class="mb-0">The attacker sent 312 requests to the DVWA login page in about
-                   7 minutes. The requests contain SQL injection payloads targeting the users
-                   table. Many of the requests returned HTTP 500 errors, which means the
-                   injection reached the database. This is a real attack, not a scanner.</p>
+                <p class="mb-0" id="dWhat">N/A</p>
               </div>
             </div>
 
             <div class="card card-blue mb-3">
               <div class="card-body">
                 <h6>What Could Go Wrong</h6>
-                <p class="mb-0">The attacker may be able to read usernames and passwords from
-                   the MySQL database, which could then be used to log into the server.</p>
+                <p class="mb-0" id="dWrong">N/A</p>
               </div>
             </div>
 
             <div class="card card-blue">
               <div class="card-body">
                 <h6>What Should Be Done</h6>
-                <p class="mb-0">Block the source IP address, check the MySQL logs for any
-                   successful data extraction, and fix the input validation on the login page.</p>
+                <p class="mb-0" id="dDo">N/A</p>
               </div>
             </div>
           </div>
@@ -977,42 +898,17 @@
         <div class="card mb-3">
           <div class="card-header card-header-navy d-flex justify-content-between align-items-center">
             <span>Raw Logs</span>
-            <small class="text-muted">Showing 4 of 312</small>
+            <small class="text-muted" id="dRawCount"></small>
           </div>
           <div class="card-body">
-<pre class="log-box">192.168.56.102 - - [12/Jul/2026:14:02:11] "GET /dvwa/vulnerabilities/sqli/?id=1' OR '1'='1" 500
-192.168.56.102 - - [12/Jul/2026:14:02:14] "GET /dvwa/vulnerabilities/sqli/?id=1 UNION SELECT user,password" 500
-192.168.56.102 - - [12/Jul/2026:14:02:18] "GET /dvwa/vulnerabilities/sqli/?id=1' AND SLEEP(5)--" 200
-192.168.56.102 - - [12/Jul/2026:14:02:23] "GET /dvwa/vulnerabilities/sqli/?id=-1' UNION SELECT 1,2--" 500</pre>
-            <a href="#" class="small mt-2 d-inline-block">Show all logs</a>
+<pre class="log-box" id="dRawLogs">No raw log sample stored for this event.</pre>
           </div>
         </div>
 
         <div class="card">
           <div class="card-header card-header-navy">Response</div>
-          <div class="card-body">
-
-            <div id="actDone">
-              <div class="alert alert-danger mb-3">
-                <i class="bi bi-shield-x"></i>
-                <strong>IP Blocked.</strong> iptables rule added at 14:09:02. Email sent to analyst.
-              </div>
-              <button class="btn btn-outline-secondary btn-sm">Mark as False Positive</button>
-              <button class="btn btn-outline-secondary btn-sm">Unblock IP</button>
-            </div>
-
-            <div id="actDone2" style="display:none"></div>
-
-            <div id="actWaiting" style="display:none">
-              <div class="alert alert-navy mb-3">
-                <i class="bi bi-hourglass-split"></i>
-                <strong>Waiting for your decision.</strong> Nothing has been blocked. Your choice
-                is also sent back to the classifier so it learns from it.
-              </div>
-              <button class="btn btn-danger">Block This IP Address</button>
-              <button class="btn btn-outline-secondary">Mark as False Positive</button>
-            </div>
-
+          <div class="card-body" id="dResponse">
+            <p class="text-muted small mb-0">Loading...</p>
           </div>
         </div>
 
@@ -1057,27 +953,8 @@
                     <th>First Seen</th><th>Last Seen</th><th>Highest Risk</th><th></th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr style="cursor:pointer" data-search="192.168.56.102 sql injection command injection port scan"
-                      onclick="openChain()">
-                    <td><strong>#C-014</strong></td>
-                    <td><code>192.168.56.102</code></td>
-                    <td>4 stages</td>
-                    <td>3 Mar 2026</td>
-                    <td>12 Jul 2026</td>
-                    <td><span class="badge bg-danger">High</span></td>
-                    <td><button class="btn btn-sm btn-primary">View Chain</button></td>
-                  </tr>
-                  <tr style="cursor:pointer" data-search="192.168.56.104 cross-site scripting directory probe"
-                      onclick="openChain()">
-                    <td><strong>#C-015</strong></td>
-                    <td><code>192.168.56.104</code></td>
-                    <td>2 stages</td>
-                    <td>28 Jun 2026</td>
-                    <td>12 Jul 2026</td>
-                    <td><span class="badge bg-warning">Uncertain</span></td>
-                    <td><button class="btn btn-sm btn-primary">View Chain</button></td>
-                  </tr>
+                <tbody id="chainsBody">
+                  <tr><td colspan="7" class="text-muted small text-center py-3">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1090,75 +967,17 @@
             <button class="btn btn-sm btn-outline-secondary" onclick="closeChain()">
               <i class="bi bi-arrow-left"></i> Back
             </button>
-            <span class="ms-auto"><span class="badge bg-danger">High Risk</span></span>
+            <span class="ms-auto" id="cvRisk"></span>
           </div>
 
-          <div class="alert alert-danger">
-            <i class="bi bi-diagram-3"></i>
-            <strong>Chain #C-014</strong> from <code>192.168.56.102</code>, 4 stages between 3 Mar 2026 and 12 Jul 2026.
+          <div class="alert alert-danger" id="cvSummary">
+            <i class="bi bi-diagram-3"></i> Loading...
           </div>
 
 <div class="card mb-3">
           <div class="card-header card-header-navy">Attack Chain</div>
           <div class="card-body">
-            <div class="text-center mt-3">
-              <svg viewBox="0 0 780 250" style="width:100%;max-width:820px">
-                <!-- edges -->
-                <path class="cedge" d="M 112 138 Q 160 78 203 82"/>
-                <path class="cedge" d="M 268 92 Q 320 145 358 148"/>
-                <path class="cedge" d="M 423 143 Q 470 80 513 82"/>
-                <path class="cedge pred" d="M 578 92 Q 630 140 668 143"/>
-                <!-- 1 Port Scanning -->
-                <g>
-                  <circle cx="80" cy="150" r="42" fill="#06d6a0" opacity=".35"/>
-                  <circle cx="80" cy="150" r="30" fill="#b2f2e5" stroke="#1a1a1a" stroke-width="4"/>
-                  <text x="80" y="148" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">3 Mar</text>
-                  <text x="80" y="162" text-anchor="middle" font-size="10" font-weight="700" fill="#5a5040">09:14</text>
-                  <text x="80" y="94" text-anchor="middle" font-size="13" font-weight="800" fill="#1a1a1a">Port Scanning</text>
-                  <rect x="24" y="200" width="112" height="21" rx="5" fill="#0d2c50" stroke="#1a1a1a" stroke-width="2.5" transform="rotate(-1.5 80 210)"/>
-                  <text x="80" y="215" text-anchor="middle" font-size="9.5" font-weight="800" fill="#ffd60a" transform="rotate(-1.5 80 210)">RECONNAISSANCE</text>
-                </g>
-                <!-- 2 SSH Brute Force -->
-                <g>
-                  <circle cx="235" cy="88" r="42" fill="#ffd60a" opacity=".4"/>
-                  <circle cx="235" cy="88" r="30" fill="#fff3b0" stroke="#1a1a1a" stroke-width="4"/>
-                  <text x="235" y="86" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">19 Apr</text>
-                  <text x="235" y="100" text-anchor="middle" font-size="10" font-weight="700" fill="#5a5040">02:47</text>
-                  <text x="235" y="32" text-anchor="middle" font-size="13" font-weight="800" fill="#1a1a1a">SSH Brute Force</text>
-                  <rect x="170" y="132" width="130" height="21" rx="5" fill="#0d2c50" stroke="#1a1a1a" stroke-width="2.5" transform="rotate(1.5 235 142)"/>
-                  <text x="235" y="147" text-anchor="middle" font-size="9.5" font-weight="800" fill="#ffd60a" transform="rotate(1.5 235 142)">CREDENTIAL ACCESS</text>
-                </g>
-                <!-- 3 SQL Injection (hot) -->
-                <g>
-                  <circle cx="390" cy="155" r="44" fill="#ff5252" opacity=".4" style="animation:haloPulse 1.5s infinite"/>
-                  <circle cx="390" cy="155" r="30" fill="#ffc9c9" stroke="#1a1a1a" stroke-width="4"/>
-                  <text x="390" y="153" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">28 Jun</text>
-                  <text x="390" y="167" text-anchor="middle" font-size="10" font-weight="700" fill="#5a5040">23:08</text>
-                  <text x="390" y="99" text-anchor="middle" font-size="13" font-weight="800" fill="#c92a2a">SQL Injection</text>
-                  <rect x="335" y="205" width="110" height="21" rx="5" fill="#ff5252" stroke="#1a1a1a" stroke-width="2.5" transform="rotate(-1.5 390 215)"/>
-                  <text x="390" y="220" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff" transform="rotate(-1.5 390 215)">INITIAL ACCESS</text>
-                </g>
-                <!-- 4 Command Injection (hot) -->
-                <g>
-                  <circle cx="545" cy="88" r="44" fill="#ff5252" opacity=".4" style="animation:haloPulse 1.5s infinite .4s"/>
-                  <circle cx="545" cy="88" r="30" fill="#ffc9c9" stroke="#1a1a1a" stroke-width="4"/>
-                  <text x="545" y="86" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">12 Jul</text>
-                  <text x="545" y="100" text-anchor="middle" font-size="10" font-weight="700" fill="#5a5040">14:02</text>
-                  <text x="545" y="32" text-anchor="middle" font-size="13" font-weight="800" fill="#c92a2a">Command Injection</text>
-                  <rect x="497" y="132" width="96" height="21" rx="5" fill="#ff5252" stroke="#1a1a1a" stroke-width="2.5" transform="rotate(1.5 545 142)"/>
-                  <text x="545" y="147" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff" transform="rotate(1.5 545 142)">EXECUTION</text>
-                </g>
-                <!-- 5 Web Shell (predicted) -->
-                <g>
-                  <circle cx="700" cy="150" r="30" fill="#fff" stroke="#a09070" stroke-width="3" stroke-dasharray="6 5"/>
-                  <text x="700" y="153" text-anchor="middle" font-size="12" font-weight="800" fill="#8a8070">next?</text>
-                  <text x="700" y="167" text-anchor="middle" font-size="10" font-weight="700" fill="#a09070">unknown</text>
-                  <text x="700" y="94" text-anchor="middle" font-size="13" font-weight="800" fill="#8a8070">Web Shell</text>
-                  <rect x="646" y="200" width="108" height="21" rx="5" fill="#e8e0cb" stroke="#a09070" stroke-width="2.5" transform="rotate(-1.5 700 210)"/>
-                  <text x="700" y="215" text-anchor="middle" font-size="9.5" font-weight="800" fill="#5a5040" transform="rotate(-1.5 700 210)">PREDICTED NEXT</text>
-                </g>
-              </svg>
-            </div>
+            <div class="text-center mt-3" id="cvSvg"></div>
           </div>
         </div>
 
@@ -1169,32 +988,8 @@
               <thead>
                 <tr><th>Date</th><th>Time</th><th>Attack Stage</th><th>Attack Type</th><th>MITRE Technique</th><th>Number of Logs</th><th>Risk Level</th></tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td><small>2026-03-03</small></td><td><small>09:14:22</small></td>
-                  <td>Reconnaissance</td><td>Port Scanning</td><td>T1046</td><td>1024</td>
-                  <td><span class="badge bg-success">Low</span></td>
-                </tr>
-                <tr>
-                  <td><small>2026-04-19</small></td><td><small>02:47:05</small></td>
-                  <td>Credential Access</td><td>SSH Brute Force</td><td>T1110</td><td>58</td>
-                  <td><span class="badge bg-warning text-dark">Uncertain</span></td>
-                </tr>
-                <tr>
-                  <td><small>2026-06-28</small></td><td><small>23:08:41</small></td>
-                  <td>Initial Access</td><td>SQL Injection</td><td>T1190</td><td>312</td>
-                  <td><span class="badge bg-danger">High</span></td>
-                </tr>
-                <tr>
-                  <td><small>2026-07-12</small></td><td><small>14:02:11</small></td>
-                  <td>Execution</td><td>Command Injection</td><td>T1059</td><td>44</td>
-                  <td><span class="badge bg-danger">High</span></td>
-                </tr>
-                <tr>
-                  <td><small>2026-07-12 14:12:40</small></td>
-                  <td>Persistence</td><td>Web Shell</td><td>T1505.003</td><td>6</td>
-                  <td><span class="badge bg-warning text-dark">Uncertain</span></td>
-                </tr>
+              <tbody id="cvTimeline">
+                <tr><td colspan="7" class="text-muted small text-center py-3">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1211,7 +1006,7 @@
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center" style="background:#0d2c50;color:#ffd60a">
             <span>Events Waiting For Your Decision</span>
-            <span class="fs-4 fw-bold">5</span>
+            <span class="fs-4 fw-bold" id="approveN">0</span>
           </div>
           <div class="table-responsive">
             <table class="table table-bordered table-hover mb-0">
@@ -1221,47 +1016,8 @@
                   <th>Logs</th><th>Confidence</th><th>Waiting</th><th></th>
                 </tr>
               </thead>
-              <tbody>
-                <tr style="cursor:pointer" onclick="openEvent('approve','uncertain','waiting')">
-                  <td>12 Jul 2026</td><td>14:01</td><td><span class="badge bg-warning">Uncertain</span></td>
-                  <td>SSH Brute Force</td><td><code>192.168.56.103</code></td><td><code>192.168.56.10</code></td>
-                  <td>58</td>
-                  <td><span class="conf-mini"><div style="width:61%;background:#ffd60a"></div></span>61%</td>
-                  <td>8 min</td>
-                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
-                </tr>
-                <tr style="cursor:pointer" onclick="openEvent('approve','uncertain','waiting')">
-                  <td>12 Jul 2026</td><td>13:55</td><td><span class="badge bg-warning">Uncertain</span></td>
-                  <td>Cross-Site Scripting</td><td><code>192.168.56.104</code></td><td><code>192.168.56.10</code></td>
-                  <td>21</td>
-                  <td><span class="conf-mini"><div style="width:54%;background:#ffd60a"></div></span>54%</td>
-                  <td>14 min</td>
-                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
-                </tr>
-                <tr style="cursor:pointer" onclick="openEvent('approve','unclassified','waiting')">
-                  <td>12 Jul 2026</td><td>13:47</td><td><span class="badge bg-secondary">Unclassified</span></td>
-                  <td>Unknown pattern</td><td><code>192.168.56.108</code></td><td><code>192.168.56.10</code></td>
-                  <td>12</td>
-                  <td><span class="conf-mini"><div style="width:47%;background:#ffd60a"></div></span>47%</td>
-                  <td>22 min</td>
-                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
-                </tr>
-                <tr style="cursor:pointer" onclick="openEvent('approve','uncertain','waiting')">
-                  <td>12 Jul 2026</td><td>13:38</td><td><span class="badge bg-warning">Uncertain</span></td>
-                  <td>File Inclusion</td><td><code>192.168.56.111</code></td><td><code>192.168.56.10</code></td>
-                  <td>9</td>
-                  <td><span class="conf-mini"><div style="width:58%;background:#ffd60a"></div></span>58%</td>
-                  <td>31 min</td>
-                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
-                </tr>
-                <tr style="cursor:pointer" onclick="openEvent('approve','unclassified','waiting')">
-                  <td>12 Jul 2026</td><td>13:24</td><td><span class="badge bg-secondary">Unclassified</span></td>
-                  <td>Unknown pattern</td><td><code>192.168.56.118</code></td><td><code>192.168.56.10</code></td>
-                  <td>6</td>
-                  <td><span class="conf-mini"><div style="width:44%;background:#ffd60a"></div></span>44%</td>
-                  <td>45 min</td>
-                  <td><button class="btn btn-sm btn-primary">View Details</button></td>
-                </tr>
+              <tbody id="approveBody">
+                <tr><td colspan="10" class="text-muted small text-center py-3">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1282,11 +1038,11 @@
           <div class="col-md-5">
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-search"></i></span>
-              <input type="text" class="form-control" placeholder="Search IP address...">
+              <input type="text" class="form-control" id="blockedSearch" placeholder="Search IP address..." oninput="filterBlocked(this.value)">
             </div>
           </div>
           <div class="col-md-2">
-            <button class="btn btn-primary w-100">Add Block</button>
+            <button class="btn btn-primary w-100" onclick="addBlockPrompt()">Add Block</button>
           </div>
         </div>
 
@@ -1296,31 +1052,8 @@
               <thead>
                 <tr><th>Source IP Address</th><th>Reason</th><th>Blocked By</th><th>Time</th><th>Status</th><th>Action</th></tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td><code>192.168.56.102</code></td>
-                  <td>SQL Injection</td><td>Auto</td><td>14:09</td>
-                  <td><span class="badge bg-danger">Active</span></td>
-                  <td><button class="btn btn-sm btn-outline-secondary">Unblock</button></td>
-                </tr>
-                <tr>
-                  <td><code>192.168.56.107</code></td>
-                  <td>Command Injection</td><td>Auto</td><td>13:22</td>
-                  <td><span class="badge bg-danger">Active</span></td>
-                  <td><button class="btn btn-sm btn-outline-secondary">Unblock</button></td>
-                </tr>
-                <tr>
-                  <td><code>192.168.56.109</code></td>
-                  <td>SSH Brute Force</td><td>Analyst</td><td>11:48</td>
-                  <td><span class="badge bg-danger">Active</span></td>
-                  <td><button class="btn btn-sm btn-outline-secondary">Unblock</button></td>
-                </tr>
-                <tr class="text-muted">
-                  <td><code>192.168.56.115</code></td>
-                  <td>Cross-Site Scripting (false positive)</td><td>Auto</td><td>09:14</td>
-                  <td><span class="badge bg-secondary">Unblocked</span></td>
-                  <td>-</td>
-                </tr>
+              <tbody id="blockedBody">
+                <tr><td colspan="6" class="text-muted small text-center py-3">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1342,22 +1075,8 @@
                   <th>Destination</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td><code>192.168.56.102</code></td>
-                  <td><span class="badge bg-danger">Block</span></td>
-                  <td>All traffic</td><td>Any destination</td>
-                </tr>
-                <tr>
-                  <td><code>192.168.56.107</code></td>
-                  <td><span class="badge bg-danger">Block</span></td>
-                  <td>All traffic</td><td>Any destination</td>
-                </tr>
-                <tr>
-                  <td><code>192.168.56.109</code></td>
-                  <td><span class="badge bg-danger">Block</span></td>
-                  <td>All traffic</td><td>Any destination</td>
-                </tr>
+              <tbody id="activeBlocksBody">
+                <tr><td colspan="4" class="text-muted small text-center py-3">No active blocks</td></tr>
               </tbody>
             </table>
 
@@ -1366,14 +1085,7 @@
               <i class="bi bi-terminal"></i> View raw command output
             </button>
             <div class="collapse mt-3" id="rawIpt">
-<pre class="log-box">$ sudo iptables -L INPUT -n
-
-Chain INPUT (policy ACCEPT)
-target  prot  source           destination
-DROP    all   192.168.56.102   0.0.0.0/0
-DROP    all   192.168.56.107   0.0.0.0/0
-DROP    all   192.168.56.109   0.0.0.0/0
-</pre>
+<pre class="log-box" id="rawIptOut">$ sudo iptables -L INPUT -n</pre>
             </div>
           </div>
         </div>
@@ -1387,58 +1099,25 @@ DROP    all   192.168.56.109   0.0.0.0/0
           <div class="col-md-5">
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-search"></i></span>
-              <input type="text" class="form-control" placeholder="Search reports..." oninput="filterReports(this.value)">
+              <input type="text" class="form-control" id="reportsSearch" placeholder="Search reports..." oninput="filterReports(this.value)">
             </div>
-          </div>
-          <div class="col-md-3">
-            <button class="btn btn-primary w-100">
-              <i class="bi bi-file-earmark-pdf"></i> Generate Report
-            </button>
           </div>
         </div>
 
-        <div class="row g-3 mb-4" id="reportGrid">
-          <div class="col-md-4">
-            <div class="rcard" data-search="incident report #42 sql injection 192.168.56.102 high">
-              <div class="rico" style="background:#ffc9c9">&#128299;</div>
-              <div style="min-width:0;flex:1">
-                <div class="rt">Incident Report #42</div>
-                <div class="rs">SQL Injection &middot; <code>192.168.56.102</code><br>blocked automatically at 14:09</div>
-                <div class="rfoot">
-                  <span class="tagm" style="background:#ff5252;color:#fff">HIGH</span>
-                  <span class="tagm" style="background:#fff">12 Jul &middot; 412 KB</span>
-                  <button class="btn btn-sm btn-outline-primary ms-auto py-0 px-2"><i class="bi bi-download"></i></button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="rcard" data-search="incident report #39 command injection 192.168.56.107 high">
-              <div class="rico" style="background:#ffe3c4">&#9889;</div>
-              <div style="min-width:0;flex:1">
-                <div class="rt">Incident Report #39</div>
-                <div class="rs">Command Injection &middot; <code>192.168.56.107</code><br>blocked automatically at 13:22</div>
-                <div class="rfoot">
-                  <span class="tagm" style="background:#ff5252;color:#fff">HIGH</span>
-                  <span class="tagm" style="background:#fff">11 Jul &middot; 308 KB</span>
-                  <button class="btn btn-sm btn-outline-primary ms-auto py-0 px-2"><i class="bi bi-download"></i></button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="rcard" data-search="incident report #37 ssh brute force 192.168.56.109 approved analyst">
-              <div class="rico" style="background:#fff3b0">&#128296;</div>
-              <div style="min-width:0;flex:1">
-                <div class="rt">Incident Report #37</div>
-                <div class="rs">SSH Brute Force &middot; <code>192.168.56.109</code><br>blocked after analyst approval</div>
-                <div class="rfoot">
-                  <span class="tagm" style="background:#ffd60a">APPROVED</span>
-                  <span class="tagm" style="background:#fff">11 Jul &middot; 227 KB</span>
-                  <button class="btn btn-sm btn-outline-primary ms-auto py-0 px-2"><i class="bi bi-download"></i></button>
-                </div>
-              </div>
-            </div>
+        <div class="card mb-4">
+          <div class="card-header card-header-navy">Incident Reports</div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Report</th><th>Attack / Title</th><th>Risk</th>
+                  <th>Resolution</th><th>Created</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reportsBody">
+                <tr><td colspan="6" class="text-muted small text-center py-3">Loading...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1446,79 +1125,18 @@ DROP    all   192.168.56.109   0.0.0.0/0
         <div class="card">
           <div class="card-body pdf-stage">
             <div class="d-flex justify-content-between align-items-center mb-3">
-              <code style="color:#fff;font-weight:700">CyREN_Incident_42_2026-07-12.pdf</code>
+              <code style="color:#fff;font-weight:700" id="pdfName">Pick a report above to preview it</code>
               <div>
-                <span class="btn btn-sm btn-light disabled">Page 1 of 3</span>
-                <button class="btn btn-sm btn-outline-secondary">
+                <button class="btn btn-sm btn-outline-secondary" id="pdfDlBtn" onclick="downloadSelectedReport()" disabled>
                   <i class="bi bi-download"></i> Download
                 </button>
               </div>
             </div>
-            <div class="bg-white p-4 mx-auto" style="max-width:600px;border:3px solid #1a1a1a;border-radius:6px">
-              <div class="border-bottom border-2 border-dark pb-2 mb-3 d-flex justify-content-between align-items-end">
-                <div>
-                  <h5 class="mb-0">Incident Response Report</h5>
-                  <small class="text-muted">CyREN</small>
-                </div>
-                <div class="text-end">
-                  <div><strong>Incident #42</strong></div>
-                  <small class="text-muted">12 July 2026</small>
-                </div>
+            <div class="bg-white mx-auto" style="max-width:860px;border:3px solid #1a1a1a;border-radius:6px;overflow:hidden">
+              <div id="pdfEmpty" class="text-muted small text-center py-5">
+                No report selected. Click <b>Preview</b> on a row above.
               </div>
-
-              <div class="alert alert-danger py-2 mb-3">
-                <strong>High Risk.</strong> IP has been blocked
-              </div>
-
-              <h6 class="mt-3">1. Summary</h6>
-              <table class="table table-sm table-borderless mb-3">
-                <tr><td class="text-muted" style="width:140px">Attack Type</td><td>SQL Injection</td></tr>
-                <tr><td class="text-muted">Source IP</td><td><code>192.168.56.102</code></td></tr>
-                <tr><td class="text-muted">Target</td><td>Target Server (DVWA)</td></tr>
-                <tr><td class="text-muted">Time</td><td>14:02:11 - 14:09:02</td></tr>
-                <tr><td class="text-muted">Logs</td><td>312</td></tr>
-              </table>
-
-              <h6>2. Classification</h6>
-              <table class="table table-sm table-bordered mb-3">
-                <thead>
-                  <tr><th>Model</th><th>Result</th><th>Confidence Score</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td>XGBoost</td><td class="text-danger">True Positive</td><td>93%</td></tr>
-                </tbody>
-              </table>
-
-              <h6>3. Analysis</h6>
-              <p class="small">The attacker sent 312 requests to the DVWA login page in about
-                 7 minutes with SQL injection payloads. Many requests returned HTTP 500,
-                 which means the injection reached the database.</p>
-
-              <table class="table table-sm table-bordered mb-3">
-                <thead>
-                  <tr><th>MITRE ID</th><th>Technique</th><th>Tactic</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td>T1190</td><td>Exploit Public-Facing Application</td><td>Initial Access</td></tr>
-                  <tr><td>T1505.003</td><td>Web Shell</td><td>Persistence</td></tr>
-                </tbody>
-              </table>
-
-              <h6>4. Action Taken</h6>
-              <table class="table table-sm table-bordered mb-0">
-                <thead>
-                  <tr><th>Time</th><th>Action</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td>14:09:02</td><td>iptables DROP rule added for source IP</td></tr>
-                  <tr><td>14:09:04</td><td>Email notification sent</td></tr>
-                </tbody>
-              </table>
-
-              <div class="border-top mt-3 pt-2 d-flex justify-content-between text-muted small">
-                <span>Generated by CyREN</span>
-                <span>Page 1 of 3</span>
-              </div>
+              <iframe id="pdfFrame" title="Report preview" style="width:100%;height:640px;border:0;display:none"></iframe>
             </div>
           </div>
         </div>
@@ -1546,47 +1164,8 @@ DROP    all   192.168.56.109   0.0.0.0/0
               <thead>
                 <tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
               </thead>
-              <tbody>
-                <tr data-search="chong mei san analyst01">
-                  <td>Chong Mei San</td><td><code>analyst01</code></td>
-                  <td><span class="badge bg-secondary">SOC Analyst</span></td>
-                  <td><span class="badge bg-success">Active</span></td>
-                  <td>12 Jul 2026 09:02</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">Edit</button>
-                    <button class="btn btn-sm btn-outline-danger">Disable</button>
-                  </td>
-                </tr>
-                <tr data-search="tan wei jie analyst02">
-                  <td>Tan Wei Jie</td><td><code>analyst02</code></td>
-                  <td><span class="badge bg-secondary">SOC Analyst</span></td>
-                  <td><span class="badge bg-success">Active</span></td>
-                  <td>12 Jul 2026 08:41</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">Edit</button>
-                    <button class="btn btn-sm btn-outline-danger">Disable</button>
-                  </td>
-                </tr>
-                <tr data-search="lim hui ying manager01 manager">
-                  <td>Lim Hui Ying</td><td><code>manager01</code></td>
-                  <td><span class="badge" style="background:#0d2c50;color:#ffd60a">SOC Manager</span></td>
-                  <td><span class="badge bg-success">Active</span></td>
-                  <td>12 Jul 2026 07:55</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">Edit</button>
-                    <button class="btn btn-sm btn-outline-danger">Disable</button>
-                  </td>
-                </tr>
-                <tr class="text-muted" data-search="raj kumar analyst03 disabled">
-                  <td>Raj Kumar</td><td><code>analyst03</code></td>
-                  <td><span class="badge bg-secondary">SOC Analyst</span></td>
-                  <td><span class="badge bg-secondary">Disabled</span></td>
-                  <td>28 Jun 2026 14:10</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">Edit</button>
-                    <button class="btn btn-sm btn-outline-success">Enable</button>
-                  </td>
-                </tr>
+              <tbody id="usersBody">
+                <tr><td colspan="6" class="text-muted small text-center py-3">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1874,52 +1453,55 @@ DROP    all   192.168.56.109   0.0.0.0/0
               <div class="card-body">
                 <div class="d-flex align-items-center mb-3">
                   <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
-                       style="width:56px;height:56px;font-size:1.2rem">CM</div>
+                       style="width:56px;height:56px;font-size:1.2rem" id="pfAvatar">?</div>
                   <div>
-                    <h6 class="mb-0">Chong Mei San</h6>
-                    <small class="text-muted">SOC Analyst</small>
+                    <h6 class="mb-0" id="pfName">&ndash;</h6>
+                    <small class="text-muted" id="pfRoleLbl">&ndash;</small>
                   </div>
                 </div>
 
+                <div id="pfMsg" class="alert py-2 small" style="display:none"></div>
+
                 <div class="mb-3">
                   <label class="form-label">Full Name</label>
-                  <input type="text" class="form-control" value="Chong Mei San">
+                  <input type="text" class="form-control" id="pfFullName">
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Email Address</label>
-                  <input type="email" class="form-control" value="analyst@company.com">
+                  <input type="email" class="form-control" id="pfEmail">
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Username</label>
-                  <input type="text" class="form-control" value="analyst01" disabled>
+                  <input type="text" class="form-control" id="pfUser" disabled>
                   <div style="font-size:0.75rem;color:#9aa0a6;margin-top:4px">Username cannot be changed</div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Role</label>
-                  <input type="text" class="form-control" value="SOC Analyst" disabled>
+                  <input type="text" class="form-control" id="pfRole" disabled>
                   <div style="font-size:0.75rem;color:#9aa0a6;margin-top:4px">Contact a manager to change your role</div>
                 </div>
-                <button class="btn btn-primary">Save Changes</button>
+                <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
               </div>
             </div>
 
             <div class="card h-row-b">
               <div class="card-header card-header-navy">Change Password</div>
               <div class="card-body">
+                <div id="cpMsg" class="alert py-2 small" style="display:none"></div>
                 <div class="mb-3">
                   <label class="form-label">Current Password</label>
-                  <input type="password" class="form-control" value="password123">
+                  <input type="password" class="form-control" id="cpCurrent" autocomplete="current-password">
                 </div>
                 <div class="mb-3">
                   <label class="form-label">New Password</label>
-                  <input type="password" class="form-control">
+                  <input type="password" class="form-control" id="cpNew" autocomplete="new-password">
                   <div style="font-size:0.75rem;color:#9aa0a6;margin-top:4px">Minimum 12 characters, one uppercase, one lowercase, one number, one special character</div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Confirm New Password</label>
-                  <input type="password" class="form-control">
+                  <input type="password" class="form-control" id="cpConfirm" autocomplete="new-password">
                 </div>
-                <button class="btn btn-primary">Update Password</button>
+                <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
               </div>
             </div>
 
@@ -1933,19 +1515,19 @@ DROP    all   192.168.56.109   0.0.0.0/0
                 <div class="row g-2 mb-3">
                   <div class="col-4">
                     <div class="card card-blue text-center"><div class="card-body py-2">
-                      <div class="fs-4">19</div>
+                      <div class="fs-4" id="actApproved">0</div>
                       <div class="text-muted small">Approved</div>
                     </div></div>
                   </div>
                   <div class="col-4">
                     <div class="card card-blue text-center"><div class="card-body py-2">
-                      <div class="fs-4">9</div>
+                      <div class="fs-4" id="actDismissed">0</div>
                       <div class="text-muted small">Dismissed</div>
                     </div></div>
                   </div>
                   <div class="col-4">
                     <div class="card card-blue text-center"><div class="card-body py-2">
-                      <div class="fs-4">2</div>
+                      <div class="fs-4" id="actReverted">0</div>
                       <div class="text-muted small">Reverted</div>
                     </div></div>
                   </div>
@@ -1956,27 +1538,8 @@ DROP    all   192.168.56.109   0.0.0.0/0
                   <thead>
                     <tr><th>Time</th><th>Decision</th><th>Result</th></tr>
                   </thead>
-                  <tbody>
-                    <tr>
-                      <td><small>13:56</small></td>
-                      <td>Unblocked 192.168.56.115</td>
-                      <td><span class="badge bg-success">False Positive</span></td>
-                    </tr>
-                    <tr>
-                      <td><small>13:55</small></td>
-                      <td>Dismissed Incident #28</td>
-                      <td><span class="badge bg-success">False Positive</span></td>
-                    </tr>
-                    <tr>
-                      <td><small>11:48</small></td>
-                      <td>Blocked 192.168.56.109</td>
-                      <td><span class="badge bg-danger">Real Threat</span></td>
-                    </tr>
-                    <tr>
-                      <td><small>10:31</small></td>
-                      <td>Blocked 192.168.56.107</td>
-                      <td><span class="badge bg-danger">Real Threat</span></td>
-                    </tr>
+                  <tbody id="actRecent">
+                    <tr><td colspan="3" class="text-muted small text-center py-2">No decisions yet</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1987,26 +1550,13 @@ DROP    all   192.168.56.109   0.0.0.0/0
               <div class="card-body">
                 <table class="table table-sm table-bordered mb-0">
                   <thead>
-                    <tr><th>Date and Time</th><th>IP Address</th><th>Result</th></tr>
+                    <tr><th>Date and Time</th><th>Result</th></tr>
                   </thead>
-                  <tbody>
-                    <tr>
-                      <td><small>2026-07-12 09:02</small></td>
-                      <td><code>10.0.2.15</code></td>
-                      <td><span class="badge bg-success">Success</span></td>
-                    </tr>
-                    <tr>
-                      <td><small>2026-07-11 08:47</small></td>
-                      <td><code>10.0.2.15</code></td>
-                      <td><span class="badge bg-success">Success</span></td>
-                    </tr>
-                    <tr>
-                      <td><small>2026-07-10 14:20</small></td>
-                      <td><code>10.0.2.19</code></td>
-                      <td><span class="badge bg-danger">Wrong password</span></td>
-                    </tr>
+                  <tbody id="loginHistBody">
+                    <tr><td colspan="2" class="text-muted small text-center py-2">&ndash;</td></tr>
                   </tbody>
                 </table>
+                <p class="text-muted small mb-0 mt-2">Only the most recent successful login is recorded.</p>
               </div>
             </div>
 
@@ -2033,13 +1583,15 @@ DROP    all   192.168.56.109   0.0.0.0/0
           Changing the risk thresholds affects which attacks are blocked automatically.
           Enter your password to confirm it is you.
         </p>
+        <div id="verifyErr" class="alert alert-danger py-2 small" style="display:none"></div>
         <div class="mb-3">
           <label class="form-label">Signed in as</label>
-          <input type="text" class="form-control" value="analyst01" disabled>
+          <input type="text" class="form-control" id="verifyUser" value="" disabled>
         </div>
         <div class="mb-3">
           <label class="form-label">Password</label>
-          <input type="password" class="form-control" value="password123">
+          <input type="password" class="form-control" id="verifyPw"
+                 onkeydown="if(event.key==='Enter')verifyAndUnlock()">
         </div>
         <div class="alert alert-warning py-2 mb-0 small">
           <i class="bi bi-exclamation-triangle"></i>
@@ -2048,7 +1600,7 @@ DROP    all   192.168.56.109   0.0.0.0/0
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-primary" data-bs-dismiss="modal" onclick="unlockThr()">Confirm</button>
+        <button class="btn btn-primary" onclick="verifyAndUnlock()">Confirm</button>
       </div>
     </div>
   </div>
@@ -2459,21 +2011,25 @@ DROP    all   192.168.56.109   0.0.0.0/0
       <div class="modal-header"><h6 class="modal-title mb-0">Add New User</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
+        <div id="addUserErr" class="alert alert-danger py-2 small" style="display:none"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Full Name</label>
-          <input type="text" class="form-control" placeholder="e.g. Chong Mei San"></div>
+          <input type="text" class="form-control" id="auName" placeholder="e.g. Chong Mei San"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Username</label>
-          <input type="text" class="form-control" placeholder="e.g. analyst04"></div>
+          <input type="text" class="form-control" id="auUser" placeholder="e.g. analyst04"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Email</label>
-          <input type="email" class="form-control" placeholder="name@company.com"></div>
+          <input type="email" class="form-control" id="auEmail" placeholder="name@company.com"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Role</label>
-          <select class="form-select"><option>SOC Analyst</option><option>SOC Manager</option></select></div>
+          <select class="form-select" id="auRole">
+            <option value="analyst">SOC Analyst</option>
+            <option value="manager">SOC Manager</option>
+          </select></div>
         <div class="mb-0"><label class="form-label small fw-bold">Temporary Password</label>
-          <input type="text" class="form-control" value="Cyren@Temp2026">
-          <div class="form-text">The user will be asked to change this on first login.</div></div>
+          <input type="text" class="form-control" id="auPw" placeholder="min 12 chars, Aa1!">
+          <div class="form-text">Minimum 12 characters with uppercase, lowercase, number and special character.</div></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-sm btn-primary" data-bs-dismiss="modal">Create Account</button>
+        <button class="btn btn-sm btn-primary" onclick="createUser()">Create Account</button>
       </div>
     </div>
   </div>
@@ -2485,18 +2041,21 @@ DROP    all   192.168.56.109   0.0.0.0/0
       <div class="modal-header"><h6 class="modal-title mb-0">Edit User</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
+        <div id="editUserErr" class="alert alert-danger py-2 small" style="display:none"></div>
+        <input type="hidden" id="euId">
         <div class="mb-2"><label class="form-label small fw-bold">Full Name</label>
-          <input type="text" class="form-control" value="Chong Mei San"></div>
+          <input type="text" class="form-control" id="euName"></div>
         <div class="mb-2"><label class="form-label small fw-bold">Username</label>
-          <input type="text" class="form-control" value="analyst01" disabled></div>
-        <div class="mb-2"><label class="form-label small fw-bold">Role</label>
-          <select class="form-select"><option>SOC Analyst</option><option>SOC Manager</option></select></div>
-        <div class="mb-0"><label class="form-label small fw-bold">Reset Password</label>
-          <button class="btn btn-outline-secondary btn-sm d-block mt-1">Send reset link</button></div>
+          <input type="text" class="form-control" id="euUser" disabled></div>
+        <div class="mb-0"><label class="form-label small fw-bold">Role</label>
+          <select class="form-select" id="euRole">
+            <option value="analyst">SOC Analyst</option>
+            <option value="manager">SOC Manager</option>
+          </select></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-sm btn-primary" data-bs-dismiss="modal">Save Changes</button>
+        <button class="btn btn-sm btn-primary" onclick="saveUserEdit()">Save Changes</button>
       </div>
     </div>
   </div>
@@ -2556,8 +2115,8 @@ function filterAlerts(q){
 }
 function filterReports(q){
   q=(q||'').toLowerCase().trim();
-  document.querySelectorAll('#reportGrid [data-search]').forEach(function(c){
-    c.closest('.col-md-4').style.display=(!q||c.dataset.search.indexOf(q)>-1)?'':'none';
+  document.querySelectorAll('#reportsBody tr[data-search]').forEach(function(tr){
+    tr.style.display=(!q||tr.dataset.search.indexOf(q)>-1)?'':'none';
   });
 }
 /* risk chips on alerts page */
@@ -2655,6 +2214,7 @@ function filterReports(q){
      Buddy stays quietly in the corner unless there is something real to say. */
   window.notifyHighRisk=function(ev){
     if(!roamOn())return;    /* notifications off: Buddy stays, but stays quiet */
+    window._buddyEventId=ev.id;
     document.getElementById('botIp').textContent=ev.source_ip||'?';
     document.getElementById('botType').textContent=ev.attack_type||'Unclassified';
     alerting=true;
@@ -2664,7 +2224,7 @@ function filterReports(q){
     placeBubble();bubble.classList.add('show');
   };
   function goApprove(){
-    if(typeof openEvent==='function')openEvent('alerts','high','done');
+    if(window._buddyEventId&&typeof openEventDetail==='function')openEventDetail(window._buddyEventId);
     bubble.classList.remove('show');
     bot.classList.remove('alerting');
     alerting=false;
@@ -2697,23 +2257,6 @@ function filterReports(q){
   });
 
   window._from='alerts';
-  window.openEvent=function(from,risk,status){
-    window._from=from||'alerts';
-    var rb=document.getElementById('detailRisk');
-    var map={high:'<span class="badge bg-danger">High Risk</span>',
-             uncertain:'<span class="badge bg-warning">Uncertain</span>',
-             unclassified:'<span class="badge bg-secondary">Unclassified</span>',
-             low:'<span class="badge bg-success">Low Risk</span>'};
-    if(rb) rb.innerHTML = map[risk]||map.high;
-    var wait=document.getElementById('actWaiting');
-    var done=document.getElementById('actDone');
-    if(wait&&done){
-      var pending=(status==='waiting');
-      wait.style.display=pending?'block':'none';
-      done.style.display=pending?'none':'block';
-    }
-    go('detail');
-  };
   window.goBack=function(){ go(window._from||'alerts'); };
 })();
 </script>
@@ -2782,6 +2325,728 @@ function filterUsers(q){
     tr.style.display=(!q||tr.dataset.search.indexOf(q)>-1)?'':'none';
   });
 }
+</script>
+
+<script>
+/* ==================================================================
+   Live data for every page: All Events, Detail, Approval, Chains,
+   Blocked, Reports (preview + download), Users, Profile.
+   ================================================================== */
+
+function riskBadge(r) {
+  if (r === 'high') return '<span class="badge bg-danger">High</span>';
+  if (r === 'uncertain') return '<span class="badge bg-warning text-dark">Uncertain</span>';
+  if (r === 'low') return '<span class="badge bg-success">Low</span>';
+  return '<span class="badge bg-secondary">' + esc(r || 'Unclassified') + '</span>';
+}
+function statusLabel(s) {
+  var map = {
+    blocked: '<span class="text-danger fw-bold">Blocked</span>',
+    awaiting: '<span class="fw-bold" style="color:#8a6d00">Awaiting</span>',
+    logged: '<span class="text-muted">Logged</span>',
+    dismissed: '<span class="text-muted">Dismissed</span>',
+    new: '<span class="text-muted">New</span>'
+  };
+  return map[s] || esc(s || '');
+}
+function confMini(c) {
+  var pct = c == null ? 0 : Math.round(c * 100);
+  var color = pct >= 85 ? '#ff5252' : pct > 40 ? '#ffd60a' : '#06d6a0';
+  return '<div class="conf-mini"><div style="width:' + pct + '%;background:' + color + '"></div></div>' +
+         (c == null ? '-' : pct + '%');
+}
+function fmtDT(iso) { return iso ? String(iso).replace('T', ' ').slice(0, 19) : '-'; }
+function fmtD(iso) { return iso ? String(iso).slice(0, 10) : '-'; }
+function fmtT(iso) { return iso ? String(iso).slice(11, 19) : ''; }
+function pwOk(p) {
+  return p.length >= 12 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /\d/.test(p) && /[^A-Za-z0-9]/.test(p);
+}
+
+/* ---------------- All Events ---------------- */
+var _alertsData = [], _alertsPage = 1;
+
+async function loadAlerts() {
+  var qs = [];
+  var f = document.getElementById('alertsFrom').value;
+  var t = document.getElementById('alertsTo').value;
+  if (f && t && f > t) { alert("'From' date cannot be after 'To' date."); return; }
+  if (f) qs.push('from=' + f);
+  if (t) qs.push('to=' + t);
+  var risk = document.getElementById('alertsRisk').value;
+  var status = document.getElementById('alertsStatus').value;
+  var ip = document.getElementById('alertsIp').value.trim();
+  if (risk) qs.push('risk=' + risk);
+  if (status) qs.push('status=' + status);
+  if (ip) qs.push('ip=' + encodeURIComponent(ip));
+
+  var data;
+  try { data = await apiGet('/api/events' + (qs.length ? '?' + qs.join('&') : '')); }
+  catch (e) { return; }
+
+  /* attack-type dropdown built from the fetched data, keeping the selection */
+  var typeSel = document.getElementById('alertsType');
+  var current = typeSel.value;
+  var types = {};
+  data.forEach(function (e) { types[e.attack_type || 'Unclassified'] = 1; });
+  typeSel.innerHTML = '<option value="">All Attack Types</option>' +
+    Object.keys(types).sort().map(function (t2) {
+      return '<option value="' + esc(t2) + '">' + esc(t2) + '</option>';
+    }).join('');
+  typeSel.value = current;
+
+  _alertsData = typeSel.value
+    ? data.filter(function (e) { return (e.attack_type || 'Unclassified') === typeSel.value; })
+    : data;
+  renderAlerts(1);
+}
+
+function renderAlerts(page) {
+  if (page) _alertsPage = page;
+  var per = parseInt(document.getElementById('alertsRows').value, 10) || 25;
+  var total = _alertsData.length;
+  var pages = Math.max(1, Math.ceil(total / per));
+  if (_alertsPage > pages) _alertsPage = pages;
+  if (_alertsPage < 1) _alertsPage = 1;
+  var start = (_alertsPage - 1) * per;
+  var slice = _alertsData.slice(start, start + per);
+
+  setText('chipAllN', total);
+  setText('chipHiN', _alertsData.filter(function (e) { return e.risk === 'high'; }).length);
+  setText('chipUnN', _alertsData.filter(function (e) { return e.risk === 'uncertain'; }).length);
+  setText('chipLoN', _alertsData.filter(function (e) { return e.risk === 'low'; }).length);
+
+  var rows = slice.map(function (e) {
+    return '<tr style="cursor:pointer" onclick="openEventDetail(' + e.id + ')">' +
+      '<td onclick="event.stopPropagation()"><input type="checkbox"></td>' +
+      '<td>' + riskBadge(e.risk) + '</td>' +
+      '<td>' + esc(e.attack_type || 'Unclassified') + '</td>' +
+      '<td><code>' + esc(e.source_ip) + '</code></td>' +
+      '<td>' + fmt(e.log_count) + '</td>' +
+      '<td>' + confMini(e.confidence) + '</td>' +
+      '<td><small>' + fmtDT(e.first_seen) + '</small></td>' +
+      '<td>' + statusLabel(e.status) + '</td></tr>';
+  }).join('');
+  setHTML('alertsBody', rows || '<tr><td colspan="8" class="text-muted small text-center py-3">No events found</td></tr>');
+  setText('alertsShowing', total
+    ? 'Showing ' + (start + 1) + '–' + (start + slice.length) + ' of ' + total
+    : 'Showing 0 of 0');
+
+  var html = '<li class="page-item' + (_alertsPage === 1 ? ' disabled' : '') +
+    '"><a class="page-link" href="#" onclick="renderAlerts(' + (_alertsPage - 1) + ');return false">&laquo;</a></li>';
+  for (var i = 1; i <= pages; i++) {
+    html += '<li class="page-item' + (i === _alertsPage ? ' active' : '') +
+      '"><a class="page-link" href="#" onclick="renderAlerts(' + i + ');return false">' + i + '</a></li>';
+  }
+  html += '<li class="page-item' + (_alertsPage === pages ? ' disabled' : '') +
+    '"><a class="page-link" href="#" onclick="renderAlerts(' + (_alertsPage + 1) + ');return false">&raquo;</a></li>';
+  setHTML('alertsPager', html);
+
+  var q = document.getElementById('alertsSearch').value;
+  if (q) filterAlerts(q);
+}
+
+function resetAlertsFilters() {
+  ['alertsSearch', 'alertsIp', 'alertsFrom', 'alertsTo', 'alertsRisk', 'alertsType', 'alertsStatus']
+    .forEach(function (id) { document.getElementById(id).value = ''; });
+  loadAlerts();
+}
+
+function exportAlertsCsv() {
+  var head = 'id,risk,attack_type,source_ip,dest_ip,log_count,confidence,status,first_seen,last_seen';
+  var lines = _alertsData.map(function (e) {
+    return [e.id, e.risk || '', '"' + String(e.attack_type || '').replace(/"/g, '""') + '"',
+            e.source_ip || '', e.dest_ip || '', e.log_count || 0,
+            e.confidence == null ? '' : e.confidence, e.status || '',
+            e.first_seen || '', e.last_seen || ''].join(',');
+  });
+  var blob = new Blob([head + '\n' + lines.join('\n')], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cyren_events.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------------- Event Detail ---------------- */
+var _detailEvent = null, _reportsCache = null;
+
+async function openEventDetail(id) {
+  var e;
+  try { e = await apiGet('/api/events/' + id); } catch (err) { return; }
+  _detailEvent = e;
+
+  var cur = document.querySelector('.page.active');
+  if (cur && cur.id !== 'p-detail') window._from = cur.id.replace('p-', '');
+
+  setHTML('detailRisk', riskBadge(e.risk));
+  setHTML('dTitle', esc(e.attack_type || 'Unclassified') + ' <span class="ms-2">' + riskBadge(e.risk) + '</span>');
+  setText('dId', '#' + e.id);
+  setText('dIp', e.source_ip || '-');
+  setText('dDest', e.dest_ip || '-');
+  setText('dLogs', fmt(e.log_count));
+  setText('dDate', fmtD(e.first_seen));
+  setText('dTime', fmtT(e.first_seen) && fmtT(e.last_seen)
+    ? fmtT(e.first_seen) + ' to ' + fmtT(e.last_seen) : '');
+
+  var pct = e.confidence == null ? null : Math.round(e.confidence * 100);
+  var resEl = document.getElementById('dResult');
+  resEl.textContent = e.risk === 'high' ? 'True Positive'
+    : e.risk === 'low' ? 'Likely False Positive' : 'Needs Review';
+  resEl.className = 'fw-semibold ' + (e.risk === 'high' ? 'text-danger' : e.risk === 'low' ? 'text-success' : '');
+  var color = pct >= 85 ? '#ff5252' : pct > 40 ? '#ffd60a' : '#06d6a0';
+  var fill = document.getElementById('dConfFill');
+  fill.style.width = (pct || 0) + '%';
+  fill.style.background = color;
+  setHTML('dConfLbl', (pct == null ? '-' : pct + '%') + ' &nbsp;<span class="text-muted">' + esc(e.risk || '') + '</span>');
+  setText('dClassNote', 'The XGBoost classifier scored this event at ' +
+    (pct == null ? 'N/A' : pct + '%') + ' confidence, which falls in the "' + (e.risk || 'unknown') + '" tier.');
+
+  var mit = (e.mitre_techniques || []).map(function (m) {
+    var s = String(m), sp = s.indexOf(' ');
+    var tid = sp > -1 ? s.slice(0, sp) : s, name = sp > -1 ? s.slice(sp + 1) : '';
+    return '<div class="card card-blue mb-2"><div class="card-body py-2">' +
+      '<span class="badge bg-primary">' + esc(tid) + '</span>' +
+      (name ? '<strong class="ms-1">' + esc(name) + '</strong>' : '') + '</div></div>';
+  }).join('');
+  setHTML('dMitre', mit || '<p class="text-muted small mb-0">No techniques matched.</p>');
+
+  var s = e.llm_summary || {};
+  setText('dWhat', s.what_happened || 'N/A');
+  setText('dWrong', s.what_could_go_wrong || 'N/A');
+  setText('dDo', s.what_should_be_done || 'N/A');
+
+  var raw = e.raw_log_sample || [];
+  setText('dRawCount', raw.length ? 'Showing ' + raw.length + ' of ' + fmt(e.log_count) : '');
+  setText('dRawLogs', raw.length ? raw.join('\n') : 'No raw log sample stored for this event.');
+
+  renderDetailResponse(e);
+  go('detail');
+
+  var rep = await eventReport(e.id);
+  var btn = document.getElementById('dPdfBtn');
+  if (btn) btn.disabled = !rep;
+}
+
+async function eventReport(eventId) {
+  try {
+    if (!_reportsCache) _reportsCache = await apiGet('/api/reports');
+  } catch (e) { return null; }
+  return _reportsCache.find(function (r) { return r.event_id === eventId; }) || null;
+}
+
+async function downloadEventReport() {
+  if (!_detailEvent) return;
+  var rep = await eventReport(_detailEvent.id);
+  if (!rep) { alert('No PDF report exists for this event.'); return; }
+  window.open('/api/reports/' + rep.id + '/download', '_blank');
+}
+
+function renderDetailResponse(e) {
+  var html;
+  if (e.status === 'blocked') {
+    html = '<div class="alert alert-danger mb-3"><i class="bi bi-shield-x"></i> <strong>IP Blocked.</strong> ' +
+      'A firewall rule is dropping all traffic from <code>' + esc(e.source_ip) + '</code>.</div>' +
+      '<button class="btn btn-outline-secondary btn-sm" onclick="decide(' + e.id + ',\'dismissed\')">Mark as False Positive</button> ' +
+      '<button class="btn btn-outline-secondary btn-sm" onclick="unblockByIp(\'' + esc(e.source_ip) + '\')">Unblock IP</button>';
+  } else if (e.status === 'awaiting') {
+    html = '<div class="alert alert-navy mb-3"><i class="bi bi-hourglass-split"></i> <strong>Waiting for your decision.</strong> ' +
+      'Nothing has been blocked. Your choice is also sent back to the classifier so it learns from it.</div>' +
+      '<button class="btn btn-danger" onclick="decide(' + e.id + ',\'approved\')">Block This IP Address</button> ' +
+      '<button class="btn btn-outline-secondary" onclick="decide(' + e.id + ',\'dismissed\')">Mark as False Positive</button>';
+  } else if (e.status === 'dismissed') {
+    html = '<div class="alert alert-success mb-0"><i class="bi bi-check-circle"></i> <strong>Dismissed as a false positive.</strong></div>';
+  } else {
+    html = '<div class="alert alert-info mb-0"><i class="bi bi-journal-text"></i> <strong>Logged.</strong> ' +
+      'The system judged this low risk; no blocking action was taken.</div>';
+  }
+  setHTML('dResponse', html);
+}
+
+async function decide(id, action) {
+  var verb = action === 'approved' ? 'block this IP address' : 'dismiss this event as a false positive';
+  if (!confirm('Are you sure you want to ' + verb + '?')) return;
+  try {
+    var res = await fetch('/api/events/' + id + '/decision', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action })
+    });
+    var data = await res.json();
+    if (!res.ok) { alert(data.error || 'Action failed'); return; }
+  } catch (e) { alert('Action failed'); return; }
+  openEventDetail(id);
+  loadDashboard();
+}
+
+async function unblockByIp(ip) {
+  if (!confirm('Remove the firewall block for ' + ip + '?')) return;
+  try {
+    var blocks = await apiGet('/api/blocked');
+    var b = blocks.find(function (x) { return x.ip === ip && x.active; });
+    if (!b) { alert('No active block found for ' + ip); return; }
+    var res = await fetch('/api/blocked/' + b.id + '/unblock', { method: 'POST' });
+    if (!res.ok) { alert('Unblock failed'); return; }
+  } catch (e) { alert('Unblock failed'); return; }
+  if (_detailEvent) openEventDetail(_detailEvent.id);
+  loadDashboard();
+}
+
+/* ---------------- Human Approval ---------------- */
+async function loadApprove() {
+  var data;
+  try { data = await apiGet('/api/events?status=awaiting'); } catch (e) { return; }
+  setText('approveN', data.length);
+  var rows = data.map(function (e) {
+    var mins = e.last_seen
+      ? Math.max(0, Math.round((Date.now() - new Date(e.last_seen + 'Z').getTime()) / 60000))
+      : null;
+    return '<tr style="cursor:pointer" onclick="openEventDetail(' + e.id + ')">' +
+      '<td>' + fmtD(e.first_seen) + '</td><td>' + (fmtT(e.first_seen) || '-') + '</td>' +
+      '<td>' + riskBadge(e.risk) + '</td>' +
+      '<td>' + esc(e.attack_type || 'Unclassified') + '</td>' +
+      '<td><code>' + esc(e.source_ip) + '</code></td>' +
+      '<td><code>' + esc(e.dest_ip || '-') + '</code></td>' +
+      '<td>' + fmt(e.log_count) + '</td>' +
+      '<td>' + confMini(e.confidence) + '</td>' +
+      '<td>' + (mins == null ? '-' : mins < 60 ? mins + ' min' : Math.round(mins / 60) + ' h') + '</td>' +
+      '<td onclick="event.stopPropagation()">' +
+        '<button class="btn btn-sm btn-primary mb-1" onclick="openEventDetail(' + e.id + ')">View</button> ' +
+        '<button class="btn btn-sm btn-danger mb-1" onclick="decide(' + e.id + ',\'approved\')">Block</button> ' +
+        '<button class="btn btn-sm btn-outline-secondary mb-1" onclick="decide(' + e.id + ',\'dismissed\')">Dismiss</button>' +
+      '</td></tr>';
+  }).join('');
+  setHTML('approveBody', rows || '<tr><td colspan="10" class="text-muted small text-center py-3">Nothing waiting for approval</td></tr>');
+}
+
+/* ---------------- Attack Chains ---------------- */
+function chainRiskBadge(r) {
+  r = (r || '').toUpperCase();
+  if (r === 'CRITICAL' || r === 'HIGH') return '<span class="badge bg-danger">' + esc(r.charAt(0) + r.slice(1).toLowerCase()) + '</span>';
+  if (r === 'MEDIUM') return '<span class="badge bg-warning text-dark">Medium</span>';
+  return '<span class="badge bg-secondary">' + esc(r || '?') + '</span>';
+}
+
+async function loadChainsPage() {
+  var data;
+  try { data = await apiGet('/api/chains'); } catch (e) { return; }
+  var rows = data.map(function (c) {
+    var search = (c.source_ip + ' ' + (c.stages || []).map(function (st) { return st.attack_type; }).join(' ')).toLowerCase();
+    return '<tr style="cursor:pointer" data-search="' + esc(search) + '" onclick="openChain(' + c.id + ')">' +
+      '<td><strong>#C-' + c.id + '</strong></td>' +
+      '<td><code>' + esc(c.source_ip) + '</code></td>' +
+      '<td>' + (c.stage_count || (c.stages || []).length) + ' stages</td>' +
+      '<td>' + fmtD(c.first_seen) + '</td><td>' + fmtD(c.last_seen) + '</td>' +
+      '<td>' + chainRiskBadge(c.highest_risk) + '</td>' +
+      '<td><button class="btn btn-sm btn-primary">View Chain</button></td></tr>';
+  }).join('');
+  setHTML('chainsBody', rows || '<tr><td colspan="7" class="text-muted small text-center py-3">No attack chains detected yet</td></tr>');
+}
+
+window.openChain = async function (id) {
+  var c;
+  try { c = await apiGet('/api/chains/' + id); } catch (e) { return; }
+  setHTML('cvRisk', chainRiskBadge(c.highest_risk));
+  setHTML('cvSummary', '<i class="bi bi-diagram-3"></i> <strong>Chain #C-' + c.id + '</strong> from <code>' +
+    esc(c.source_ip) + '</code>, ' + (c.stages || []).length + ' stages between ' +
+    fmtD(c.first_seen) + ' and ' + fmtD(c.last_seen) + '.');
+  renderChainSvg(c);
+
+  var rows = (c.stages || []).map(function (st) {
+    return '<tr><td><small>' + fmtD(st.timestamp) + '</small></td>' +
+      '<td><small>' + (fmtT(st.timestamp) || '-') + '</small></td>' +
+      '<td>' + esc(st.phase || '-') + '</td>' +
+      '<td>' + esc(st.attack_type || '-') + '</td>' +
+      '<td>-</td><td>-</td><td>-</td></tr>';
+  });
+  if (c.predicted_next) {
+    rows.push('<tr class="text-muted"><td colspan="2"><small>predicted</small></td>' +
+      '<td>' + esc(c.predicted_next) + '</td><td colspan="4">Predicted next stage &mdash; not observed yet</td></tr>');
+  }
+  setHTML('cvTimeline', rows.join('') || '<tr><td colspan="7" class="text-muted small text-center py-3">No stages recorded</td></tr>');
+
+  document.getElementById('chainPick').style.display = 'none';
+  document.getElementById('chainView').style.display = 'block';
+  var ct = document.querySelector('.content'); if (ct) ct.scrollTop = 0;
+};
+
+function renderChainSvg(c) {
+  var nodes = (c.stages || []).map(function (st) {
+    return { label: st.attack_type || '?', phase: st.phase || '',
+             d: fmtD(st.timestamp).slice(5), t: (fmtT(st.timestamp) || '').slice(0, 5), pred: false };
+  });
+  if (c.predicted_next) nodes.push({ label: c.predicted_next, phase: 'PREDICTED NEXT', d: 'next?', t: '', pred: true });
+  if (!nodes.length) { setHTML('cvSvg', '<p class="text-muted small">No stages to draw.</p>'); return; }
+
+  var W = Math.max(360, nodes.length * 165), H = 250;
+  var halos = ['#06d6a0', '#ffd60a', '#ff5252'];
+  var fills = ['#b2f2e5', '#fff3b0', '#ffc9c9'];
+  var pts = nodes.map(function (n, i) {
+    var x = nodes.length === 1 ? W / 2 : 80 + i * ((W - 160) / (nodes.length - 1));
+    return { x: x, y: i % 2 === 0 ? 150 : 88 };
+  });
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:' + Math.min(W, 820) + 'px">';
+  for (var i = 0; i < pts.length - 1; i++) {
+    var a = pts[i], b = pts[i + 1], mx = (a.x + b.x) / 2;
+    svg += '<path class="cedge' + (nodes[i + 1].pred ? ' pred' : '') + '" d="M ' + (a.x + 30) + ' ' + a.y +
+           ' Q ' + mx + ' ' + ((a.y + b.y) / 2 - 40) + ' ' + (b.x - 30) + ' ' + b.y + '"/>';
+  }
+  nodes.forEach(function (n, i) {
+    var p = pts[i];
+    if (n.pred) {
+      svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="30" fill="#fff" stroke="#a09070" stroke-width="3" stroke-dasharray="6 5"/>';
+      svg += '<text x="' + p.x + '" y="' + (p.y + 3) + '" text-anchor="middle" font-size="11" font-weight="800" fill="#8a8070">next?</text>';
+      svg += '<text x="' + p.x + '" y="' + (p.y - 44) + '" text-anchor="middle" font-size="12" font-weight="800" fill="#8a8070">' + esc(n.label) + '</text>';
+      svg += '<text x="' + p.x + '" y="' + (p.y + 48) + '" text-anchor="middle" font-size="9" font-weight="800" fill="#a09070">PREDICTED NEXT</text>';
+    } else {
+      var frac = nodes.length > 1 ? i / (nodes.length - 1) : 1;
+      var k = frac < 0.34 ? 0 : frac < 0.67 ? 1 : 2;
+      svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="42" fill="' + halos[k] + '" opacity=".35"/>';
+      svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="30" fill="' + fills[k] + '" stroke="#1a1a1a" stroke-width="4"/>';
+      svg += '<text x="' + p.x + '" y="' + (p.y - 1) + '" text-anchor="middle" font-size="11" font-weight="800" fill="#1a1a1a">' + esc(n.d) + '</text>';
+      svg += '<text x="' + p.x + '" y="' + (p.y + 13) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#5a5040">' + esc(n.t) + '</text>';
+      svg += '<text x="' + p.x + '" y="' + (p.y - 44) + '" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">' + esc(n.label) + '</text>';
+      svg += '<text x="' + p.x + '" y="' + (p.y + 48) + '" text-anchor="middle" font-size="9" font-weight="800" fill="#5a5040">' + esc((n.phase || '').toUpperCase()) + '</text>';
+    }
+  });
+  svg += '</svg>';
+  setHTML('cvSvg', svg);
+}
+
+/* ---------------- Firewall Blocks ---------------- */
+async function loadBlocked() {
+  var data;
+  try { data = await apiGet('/api/blocked'); } catch (e) { return; }
+
+  var rows = data.map(function (b) {
+    return '<tr' + (b.active ? '' : ' class="text-muted"') +
+      ' data-search="' + esc((b.ip + ' ' + (b.attack_type || '')).toLowerCase()) + '">' +
+      '<td><code>' + esc(b.ip) + '</code></td>' +
+      '<td>' + esc(b.attack_type || '-') + '</td>' +
+      '<td>' + (b.blocked_by === 'auto' ? 'Auto' : 'Analyst') + '</td>' +
+      '<td><small>' + fmtDT(b.created_at) + '</small></td>' +
+      '<td>' + (b.active ? '<span class="badge bg-danger">Active</span>'
+                         : '<span class="badge bg-secondary">Unblocked</span>') + '</td>' +
+      '<td>' + (b.active
+        ? '<button class="btn btn-sm btn-outline-secondary" onclick="unblockId(' + b.id + ')">Unblock</button>'
+        : '-') + '</td></tr>';
+  }).join('');
+  setHTML('blockedBody', rows || '<tr><td colspan="6" class="text-muted small text-center py-3">No blocks yet</td></tr>');
+
+  var act = data.filter(function (b) { return b.active; });
+  setHTML('activeBlocksBody', act.map(function (b) {
+    return '<tr><td><code>' + esc(b.ip) + '</code></td><td><span class="badge bg-danger">Block</span></td>' +
+      '<td>All traffic</td><td>Any destination</td></tr>';
+  }).join('') || '<tr><td colspan="4" class="text-muted small text-center py-3">No active blocks</td></tr>');
+
+  setText('rawIptOut', '$ sudo iptables -L INPUT -n\n\nChain INPUT (policy ACCEPT)\ntarget  prot  source           destination\n' +
+    (act.length
+      ? act.map(function (b) { return 'DROP    all   ' + (b.ip + '                ').slice(0, 17) + '0.0.0.0/0'; }).join('\n')
+      : '(no DROP rules)'));
+
+  var q = document.getElementById('blockedSearch').value;
+  if (q) filterBlocked(q);
+}
+
+function filterBlocked(q) {
+  q = (q || '').toLowerCase().trim();
+  document.querySelectorAll('#blockedBody tr[data-search]').forEach(function (tr) {
+    tr.style.display = (!q || tr.dataset.search.indexOf(q) > -1) ? '' : 'none';
+  });
+}
+
+async function unblockId(id) {
+  if (!confirm('Remove this firewall block?')) return;
+  try {
+    var res = await fetch('/api/blocked/' + id + '/unblock', { method: 'POST' });
+    if (!res.ok) { alert('Unblock failed'); return; }
+  } catch (e) { alert('Unblock failed'); return; }
+  loadBlocked();
+  loadDashboard();
+}
+
+async function addBlockPrompt() {
+  var ip = prompt('IP address to block (IPv4):');
+  if (!ip) return;
+  var reason = prompt('Reason (optional):') || 'Manual block';
+  try {
+    var res = await fetch('/api/blocked', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip: ip.trim(), reason: reason })
+    });
+    var data = await res.json();
+    if (!res.ok) { alert(data.error || 'Block failed'); return; }
+  } catch (e) { alert('Block failed'); return; }
+  loadBlocked();
+  loadDashboard();
+}
+
+/* ---------------- Incident Reports ---------------- */
+var _selReport = null;
+
+async function loadReports() {
+  try { _reportsCache = await apiGet('/api/reports'); } catch (e) { return; }
+  var rows = _reportsCache.map(function (r) {
+    var fname = (r.file_path || '').split(/[\\\/]/).pop();
+    var search = ('incident report #' + r.id + ' ' + (r.title || '') + ' ' +
+                  (r.risk || '') + ' ' + (r.resolution || '') + ' ' + fname).toLowerCase();
+    return '<tr data-search="' + esc(search) + '">' +
+      '<td><strong>#' + r.id + '</strong></td>' +
+      '<td>' + esc(r.title || fname || '-') + '</td>' +
+      '<td>' + riskBadge(r.risk) + '</td>' +
+      '<td>' + esc((r.resolution || '-').replace(/_/g, ' ')) + '</td>' +
+      '<td><small>' + fmtDT(r.created_at) + '</small></td>' +
+      '<td>' +
+        '<button class="btn btn-sm btn-primary mb-1" onclick="previewReport(' + r.id + ')"><i class="bi bi-eye"></i> Preview</button> ' +
+        '<button class="btn btn-sm btn-outline-primary mb-1" onclick="window.open(\'/api/reports/' + r.id + '/download\',\'_blank\')"><i class="bi bi-download"></i> Download</button>' +
+      '</td></tr>';
+  }).join('');
+  setHTML('reportsBody', rows || '<tr><td colspan="6" class="text-muted small text-center py-3">No reports generated yet</td></tr>');
+  var q = document.getElementById('reportsSearch').value;
+  if (q) filterReports(q);
+}
+
+function previewReport(id) {
+  _selReport = (_reportsCache || []).find(function (r) { return r.id === id; }) || null;
+  var fname = _selReport ? (_selReport.file_path || '').split(/[\\\/]/).pop() : '';
+  setText('pdfName', fname || ('Report #' + id));
+  document.getElementById('pdfDlBtn').disabled = false;
+  document.getElementById('pdfEmpty').style.display = 'none';
+  var f = document.getElementById('pdfFrame');
+  f.style.display = 'block';
+  f.src = '/api/reports/' + id + '/preview';
+}
+
+function downloadSelectedReport() {
+  if (_selReport) window.open('/api/reports/' + _selReport.id + '/download', '_blank');
+}
+
+/* ---------------- User Management ---------------- */
+async function loadUsers() {
+  var res = await fetch('/api/users');
+  if (res.status === 403) {
+    setHTML('usersBody', '<tr><td colspan="6" class="text-muted small text-center py-3">' +
+      'Only SOC managers can view and manage user accounts.</td></tr>');
+    return;
+  }
+  var data = await res.json().catch(function () { return null; });
+  if (!res.ok || !data) return;
+  window._usersCache = data;
+  var me = (window.CURRENT_USER || {}).id;
+  var rows = data.map(function (u) {
+    return '<tr' + (u.is_active ? '' : ' class="text-muted"') +
+      ' data-search="' + esc((u.full_name + ' ' + u.username).toLowerCase()) + '">' +
+      '<td>' + esc(u.full_name) + '</td><td><code>' + esc(u.username) + '</code></td>' +
+      '<td>' + (u.role === 'manager'
+        ? '<span class="badge" style="background:#0d2c50;color:#ffd60a">SOC Manager</span>'
+        : '<span class="badge bg-secondary">SOC Analyst</span>') + '</td>' +
+      '<td>' + (u.is_active ? '<span class="badge bg-success">Active</span>'
+                            : '<span class="badge bg-secondary">Disabled</span>') + '</td>' +
+      '<td><small>' + fmtDT(u.last_login) + '</small></td>' +
+      '<td><button class="btn btn-sm btn-outline-secondary mb-1" onclick="openEditUser(' + u.id + ')">Edit</button> ' +
+      (u.id === me ? '' : (u.is_active
+        ? '<button class="btn btn-sm btn-outline-danger mb-1" onclick="setUserActive(' + u.id + ',false)">Disable</button>'
+        : '<button class="btn btn-sm btn-outline-success mb-1" onclick="setUserActive(' + u.id + ',true)">Enable</button>')) +
+      '</td></tr>';
+  }).join('');
+  setHTML('usersBody', rows || '<tr><td colspan="6" class="text-muted small text-center py-3">No users</td></tr>');
+}
+
+async function createUser() {
+  var errEl = document.getElementById('addUserErr');
+  errEl.style.display = 'none';
+  var body = {
+    full_name: document.getElementById('auName').value.trim(),
+    username: document.getElementById('auUser').value.trim(),
+    email: document.getElementById('auEmail').value.trim(),
+    role: document.getElementById('auRole').value,
+    password: document.getElementById('auPw').value
+  };
+  if (!body.username || !body.full_name || !body.password) {
+    errEl.textContent = 'Username, full name and password are required.';
+    errEl.style.display = 'block'; return;
+  }
+  if (!pwOk(body.password)) {
+    errEl.textContent = 'Password must be at least 12 characters with uppercase, lowercase, number and special character.';
+    errEl.style.display = 'block'; return;
+  }
+  try {
+    var res = await fetch('/api/users', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    var data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Create failed'; errEl.style.display = 'block'; return; }
+  } catch (e) { errEl.textContent = 'Create failed'; errEl.style.display = 'block'; return; }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('addUserModal')).hide();
+  ['auName', 'auUser', 'auEmail', 'auPw'].forEach(function (id) { document.getElementById(id).value = ''; });
+  loadUsers();
+}
+
+function openEditUser(id) {
+  var u = (window._usersCache || []).find(function (x) { return x.id === id; });
+  if (!u) return;
+  document.getElementById('editUserErr').style.display = 'none';
+  document.getElementById('euId').value = u.id;
+  document.getElementById('euName').value = u.full_name;
+  document.getElementById('euUser').value = u.username;
+  document.getElementById('euRole').value = u.role;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('editUserModal')).show();
+}
+
+async function saveUserEdit() {
+  var errEl = document.getElementById('editUserErr');
+  errEl.style.display = 'none';
+  var id = document.getElementById('euId').value;
+  try {
+    var res = await fetch('/api/users/' + id, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: document.getElementById('euName').value.trim(),
+        role: document.getElementById('euRole').value
+      })
+    });
+    var data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Save failed'; errEl.style.display = 'block'; return; }
+  } catch (e) { errEl.textContent = 'Save failed'; errEl.style.display = 'block'; return; }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('editUserModal')).hide();
+  loadUsers();
+}
+
+async function setUserActive(id, active) {
+  if (!active && !confirm('Disable this account? The user will no longer be able to sign in.')) return;
+  try {
+    var res = await fetch('/api/users/' + id, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: active })
+    });
+    var data = await res.json();
+    if (!res.ok) { alert(data.error || 'Update failed'); return; }
+  } catch (e) { alert('Update failed'); return; }
+  loadUsers();
+}
+
+/* ---------------- My Profile ---------------- */
+function pfShow(id, ok, msg) {
+  var el = document.getElementById(id);
+  el.className = 'alert py-2 small ' + (ok ? 'alert-success' : 'alert-danger');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function loadProfile() {
+  var u = window.CURRENT_USER || {};
+  var initials = (u.full_name || u.username || '?').split(/\s+/)
+    .map(function (w) { return w.charAt(0); }).join('').toUpperCase().slice(0, 2);
+  setText('pfAvatar', initials);
+  setText('pfName', u.full_name || '-');
+  setText('pfRoleLbl', u.role === 'manager' ? 'SOC Manager' : 'SOC Analyst');
+  document.getElementById('pfFullName').value = u.full_name || '';
+  document.getElementById('pfEmail').value = u.email || '';
+  document.getElementById('pfUser').value = u.username || '';
+  document.getElementById('pfRole').value = u.role === 'manager' ? 'SOC Manager' : 'SOC Analyst';
+  setHTML('loginHistBody', u.last_login
+    ? '<tr><td><small>' + fmtDT(u.last_login) + '</small></td><td><span class="badge bg-success">Success</span></td></tr>'
+    : '<tr><td colspan="2" class="text-muted small text-center py-2">No login recorded</td></tr>');
+  loadActivity();
+}
+
+async function loadActivity() {
+  var a;
+  try { a = await apiGet('/api/me/activity'); } catch (e) { return; }
+  setText('actApproved', a.counts.approved || 0);
+  setText('actDismissed', a.counts.dismissed || 0);
+  setText('actReverted', a.counts.reverted || 0);
+  var rows = (a.recent || []).map(function (d) {
+    var what = d.action === 'approved' ? 'Blocked ' : d.action === 'dismissed' ? 'Dismissed ' : esc(d.action) + ' ';
+    var badge = d.label === 'true_positive'
+      ? '<span class="badge bg-danger">Real Threat</span>'
+      : '<span class="badge bg-success">False Positive</span>';
+    return '<tr><td><small>' + fmtDT(d.created_at) + '</small></td>' +
+      '<td>' + what + esc(d.source_ip || ('event #' + d.event_id)) + '</td>' +
+      '<td>' + badge + '</td></tr>';
+  }).join('');
+  setHTML('actRecent', rows || '<tr><td colspan="3" class="text-muted small text-center py-2">No decisions yet</td></tr>');
+}
+
+async function saveProfile() {
+  var body = {
+    full_name: document.getElementById('pfFullName').value.trim(),
+    email: document.getElementById('pfEmail').value.trim()
+  };
+  try {
+    var res = await fetch('/api/profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    var data = await res.json();
+    if (!res.ok || !data.ok) { pfShow('pfMsg', false, data.error || 'Save failed'); return; }
+    window.CURRENT_USER = data.user;
+    fillUserInfo();
+    loadProfile();
+    pfShow('pfMsg', true, 'Profile updated.');
+  } catch (e) { pfShow('pfMsg', false, 'Save failed'); }
+}
+
+async function changePassword() {
+  var cur = document.getElementById('cpCurrent').value;
+  var nw = document.getElementById('cpNew').value;
+  var cf = document.getElementById('cpConfirm').value;
+  if (nw !== cf) { pfShow('cpMsg', false, 'New passwords do not match.'); return; }
+  if (!pwOk(nw)) {
+    pfShow('cpMsg', false, 'Password must be at least 12 characters with uppercase, lowercase, number and special character.');
+    return;
+  }
+  try {
+    var res = await fetch('/api/change-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: cur, new_password: nw })
+    });
+    var data = await res.json();
+    if (!res.ok || !data.ok) { pfShow('cpMsg', false, data.error || 'Change failed'); return; }
+    ['cpCurrent', 'cpNew', 'cpConfirm'].forEach(function (id) { document.getElementById(id).value = ''; });
+    pfShow('cpMsg', true, 'Password updated. Use the new password next time you sign in.');
+  } catch (e) { pfShow('cpMsg', false, 'Change failed'); }
+}
+
+/* ---------------- Settings identity check ---------------- */
+async function verifyAndUnlock() {
+  var errEl = document.getElementById('verifyErr');
+  errEl.style.display = 'none';
+  try {
+    var res = await fetch('/api/verify-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: document.getElementById('verifyPw').value })
+    });
+    var data = await res.json();
+    if (!res.ok || !data.ok) {
+      errEl.textContent = data.error || 'Wrong password';
+      errEl.style.display = 'block';
+      return;
+    }
+  } catch (e) {
+    errEl.textContent = 'Verification failed';
+    errEl.style.display = 'block';
+    return;
+  }
+  document.getElementById('verifyPw').value = '';
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('verifyModal')).hide();
+  unlockThr();
+}
+
+/* ---------------- navigation hook ---------------- */
+(function () {
+  var LOADERS = {
+    alerts: loadAlerts, approve: loadApprove, chain: loadChainsPage,
+    blocked: loadBlocked, reports: loadReports, users: loadUsers, profile: loadProfile
+  };
+  var _go = window.go;
+  window.go = function (p) {
+    _go(p);
+    var fn = LOADERS[p];
+    if (fn) fn();
+  };
+  document.addEventListener('DOMContentLoaded', function () {
+    var vu = document.getElementById('verifyUser');
+    if (vu) vu.value = (window.CURRENT_USER || {}).username || '';
+  });
+})();
 </script>
 </body>
 </html>
