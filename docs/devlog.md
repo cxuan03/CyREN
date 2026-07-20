@@ -523,3 +523,41 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
 ### 如何验证自动刷新生效（交给用户）
 
 见下方回复。
+
+---
+
+## 2026-07-20 — 源IP黑名单过滤噪音 + 回车搜索 + "最后更新"实时指示器
+
+### 做了什么
+
+1. **源IP黑名单**（要求：过滤主机/本机噪音，可配置，blacklist 非 whitelist）：
+   - settings 新增 `SOURCE_IP_BLACKLIST`，默认 `127.0.0.0/8,::1,192.168.56.1`
+     （loopback + VirtualBox host-only 网关＝主机自己）。逗号分隔，支持单个 IP
+     或 CIDR 段。
+   - `siem_service` 用 `ipaddress` 解析黑名单，`_is_blacklisted(ip)` 判定；
+     在 `_query_alerts` 里**提取源IP之后、聚合成事件之前**丢弃黑名单告警
+     （threshold 告警回查恢复出的 IP 若命中黑名单也一并丢），并打日志
+     "dropped N blacklisted-source alert(s)"。scheduler 之后不会再生成这些噪音。
+   - 新增 `scripts/purge_blacklisted_events.py` 清理黑名单生效前已入库的噪音事件
+     （连同其报告/决策/封禁），支持 `--dry-run`。
+2. **Human Approval 搜索框支持回车**：`apprSearch` 加 `onkeydown` Enter→filterApprove
+   （原有 oninput 实时过滤保留）。
+3. **"最后更新于 HH:MM:SS" 实时指示器**：header 右侧加黄色 LIVE 药丸 + 脉冲绿点 +
+   `updated HH:MM:SS`，每次自动刷新（10s）跳一次并闪一下；导航切页、初始加载也更新。
+   `markRefreshed()` 由 `refreshActive()`、`go()`、初始 DOMContentLoaded 调用。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| 图里 CyREN 把 192.168.56.1（主机网关）和 127.0.0.1（localhost）的 Port Scanning 当成攻击事件 | 加源IP黑名单在聚合前丢弃；清理脚本删掉已入库的 7 个噪音事件（127.0.0.1×1、192.168.56.1×6） |
+| Kibana ~9417 告警 vs CyREN 21/14 事件的疑虑 | 正常：CyREN 按 (source_ip, rule) 聚合 + 有抓取窗口 + 现在过滤噪音，不是一告警一事件 |
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- `_is_blacklisted` 单测：127.0.0.1 / 192.168.56.1 → True；.104/.150/.151 / 空 / unknown → False。
+- purge 脚本删掉 7 个噪音事件，剩 14 个全部来自真实攻击者。
+- 起真实 app 认证后验证：`/api/events` 的源IP只剩 192.168.56.104/150/151，
+  无 127.0.0.1 / 192.168.56.1；header live 指示器 + markRefreshed 接线到位；
+  apprSearch 回车已接。

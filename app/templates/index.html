@@ -183,6 +183,21 @@
 
   /* ---- global search in header ---- */
   .gsearch{flex:1;max-width:460px}
+  /* live auto-refresh indicator in the header */
+  .live-indicator{
+    display:flex;align-items:center;gap:8px;flex-shrink:0;
+    background:#ffd60a;color:#0d2c50;border:3px solid #1a1a1a;border-radius:8px;
+    padding:.35rem .7rem;font-weight:700;font-size:.8rem;white-space:nowrap;
+    box-shadow:2px 2px 0 #1a1a1a;
+  }
+  .live-indicator b{font-family:'Archivo Black',sans-serif;letter-spacing:.3px}
+  .live-dot{
+    width:10px;height:10px;border-radius:50%;background:#06d6a0;
+    border:2px solid #1a1a1a;flex-shrink:0;animation:livePulse 1.4s ease-in-out infinite;
+  }
+  @keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+  .live-indicator.flash{animation:liveFlash .5s ease}
+  @keyframes liveFlash{0%{background:#06d6a0}100%{background:#ffd60a}}
   .gsearch .input-group-text{background:#ffd60a}
   .gsearch .form-control::placeholder{color:#9a927e;font-weight:500}
 
@@ -401,6 +416,11 @@
                placeholder="Search the whole system by IP, attack type, or incident number"
                onkeydown="if(event.key==='Enter')globalGo(this.value)">
       </div>
+    </div>
+    <div class="live-indicator" id="liveIndicator"
+         title="Live: the view auto-refreshes every 10 seconds">
+      <span class="live-dot"></span>
+      <span>LIVE &middot; updated <b id="lastUpdated">--:--:--</b></span>
     </div>
   </header>
 
@@ -1038,7 +1058,8 @@
                 <div class="input-group">
                   <span class="input-group-text"><i class="bi bi-search"></i></span>
                   <input type="text" class="form-control" id="apprSearch"
-                         placeholder="IP, attack type, or event ID" oninput="filterApprove(this.value)">
+                         placeholder="IP, attack type, or event ID" oninput="filterApprove(this.value)"
+                         onkeydown="if(event.key==='Enter')filterApprove(this.value)">
                 </div>
               </div>
               <div class="col-md-3">
@@ -1733,14 +1754,29 @@
   });
 
   var _dashTimer = null;
+  /* Show when the data was last pulled, and give the header a quick flash so
+     the refresh is visible at a glance. */
+  function markRefreshed() {
+    var el = document.getElementById('lastUpdated');
+    if (el) {
+      var d = new Date();
+      var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+      el.textContent = p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds());
+    }
+    var ind = document.getElementById('liveIndicator');
+    if (ind) { ind.classList.remove('flash'); void ind.offsetWidth; ind.classList.add('flash'); }
+  }
   /* Auto-refresh every 10s: re-fetch the data for whichever page is on
      screen (dashboard KPIs + lists, or the active list page), so the UI
      tracks the 15s scheduler without a manual reload. */
   function refreshActive() {
     var p = window._activePage || 'dash';
-    if (p === 'dash') { loadDashboard(); return; }
-    var fn = window._pageLoaders && window._pageLoaders[p];
-    if (fn) fn();
+    if (p === 'dash') { loadDashboard(); }
+    else {
+      var fn = window._pageLoaders && window._pageLoaders[p];
+      if (fn) fn();
+    }
+    markRefreshed();
   }
   function startDashRefresh() {
     if (_dashTimer) clearInterval(_dashTimer);
@@ -1782,6 +1818,7 @@
     fillUserInfo();
     drawCharts();
     loadDashboard();
+    markRefreshed();
     startDashRefresh();
   });
 
@@ -3225,6 +3262,7 @@ async function verifyAndUnlock() {
     window._activePage = p;
     var fn = LOADERS[p];
     if (fn) fn();
+    if (typeof markRefreshed === 'function') markRefreshed();
   };
   document.addEventListener('DOMContentLoaded', function () {
     var vu = document.getElementById('verifyUser');

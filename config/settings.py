@@ -42,6 +42,15 @@ class Settings:
     # scripts/backfill_events.py for anything older.
     FETCH_WINDOW_HOURS = int(os.getenv("FETCH_WINDOW_HOURS", "168") or 168)
 
+    # Source IPs whose alerts are noise, not attacks: loopback and the
+    # VirtualBox host-only gateway (the host machine itself). Alerts from
+    # these are dropped before an event is created. Comma-separated; each
+    # entry may be a single IP or a CIDR range (e.g. "127.0.0.0/8").
+    SOURCE_IP_BLACKLIST = os.getenv(
+        "SOURCE_IP_BLACKLIST",
+        "127.0.0.0/8,::1,192.168.56.1",
+    )
+
     # ---- Background pipeline scheduler ----
     ENABLE_SCHEDULER = _bool("ENABLE_SCHEDULER", False)
     POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "15") or 15)

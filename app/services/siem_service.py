@@ -9,6 +9,7 @@ The query targets the Kibana security alert index (default
 `.alerts-security.alerts-default`), filtering on documents that carry
 `kibana.alert.rule.name` -- the same query the validated prototype used.
 """
+import ipaddress
 import logging
 import re
 from collections import Counter, defaultdict
@@ -30,6 +31,41 @@ _IP_RE = re.compile(r"\b(\d{1,3}(?:\.\d{1,3}){3})\b")
 _FROM_IP_RE = re.compile(r"\bfrom (\d{1,3}(?:\.\d{1,3}){3})\b")
 
 _SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+
+
+def _parse_blacklist(raw: str):
+    """Parse SOURCE_IP_BLACKLIST into (exact_ips, networks)."""
+    exact, nets = set(), []
+    for item in (raw or "").split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if "/" in item:
+            try:
+                nets.append(ipaddress.ip_network(item, strict=False))
+            except ValueError:
+                log.warning("[siem] ignoring invalid blacklist CIDR: %r", item)
+        else:
+            exact.add(item)
+    return exact, nets
+
+
+_BL_EXACT, _BL_NETS = _parse_blacklist(getattr(settings, "SOURCE_IP_BLACKLIST", ""))
+
+
+def _is_blacklisted(ip: str) -> bool:
+    """True if this source IP is noise (loopback, host gateway, ...)."""
+    if not ip or ip == "unknown":
+        return False
+    if ip in _BL_EXACT:
+        return True
+    if _BL_NETS:
+        try:
+            addr = ipaddress.ip_address(ip)
+            return any(addr in net for net in _BL_NETS)
+        except ValueError:
+            return False
+    return False
 
 
 def _get(source: dict, dotted: str, default=None):
@@ -175,6 +211,7 @@ class SiemService:
 
         alerts = []
         enriched = 0
+        dropped = Counter()
         for hit in resp["hits"]["hits"]:
             source = hit["_source"]
             message = (_get(source, "message") or "")[:500]
@@ -193,6 +230,12 @@ class SiemService:
                     if not message:
                         message = sample[0][:500]
 
+            # drop noise from loopback / the host-only gateway before it ever
+            # becomes an event (configurable via SOURCE_IP_BLACKLIST)
+            if _is_blacklisted(source_ip):
+                dropped[source_ip] += 1
+                continue
+
             alerts.append({
                 "id": hit["_id"],
                 "timestamp": _get(source, "@timestamp", ""),
@@ -210,6 +253,9 @@ class SiemService:
                  len(alerts), hours, len(by_rule), dict(by_rule))
         if enriched:
             log.info("[siem] recovered the source IP from raw logs for %d alert(s)", enriched)
+        if dropped:
+            log.info("[siem] dropped %d blacklisted-source alert(s): %s",
+                     sum(dropped.values()), dict(dropped))
         unresolved = sum(1 for a in alerts if a["source_ip"] == "unknown")
         if unresolved:
             log.warning("[siem] %d alert(s) still have no source IP; the rule emits no "
