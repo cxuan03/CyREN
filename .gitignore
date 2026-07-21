@@ -8,3 +8,5 @@ data/reports/
 data/logs/
 .pytest_cache/
 venv/
+data/training_set.csv
+data/training_set_manifest.csv

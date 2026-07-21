@@ -20,6 +20,8 @@ skeleton stays runnable.
 """
 import json
 import os
+from urllib.parse import unquote
+
 import numpy as np
 
 from config.settings import settings
@@ -31,13 +33,34 @@ except ImportError:      # allows the skeleton to run before xgboost is installe
     xgb = None
 
 
-# payload keywords that indicate a genuine attack string in the raw logs
-# (same indicator set the FYP1 prototype validated)
+# Substrings that mark a genuine attack payload in the raw logs. Chosen so that
+# benign DVWA traffic (id=1, name=John, ip=127.0.0.1, page=include.php) never
+# matches, but real tool payloads do. Matching runs on both the raw line and
+# its URL-decoded form, because Apache logs the payload percent-encoded
+# (id=1%27%20UNION%20SELECT), which the old phrase list never matched.
 ATTACK_KEYWORDS = [
-    "union select", "or 1=1", "' or '", "<script", "onerror=",
-    "whoami", "etc/passwd", "/bin/bash", "nmap", "masscan",
-    "failed password", "authentication failure",
+    # SQL injection
+    "union", "select", "or 1=1", "' or", "'or", "' and", "'and", "sleep(",
+    "concat(", "information_schema", "'--", "%27",
+    # cross-site scripting
+    "<script", "onerror", "onload", "onmouseover", "javascript:", "alert(",
+    "<svg", "<img",
+    # command injection
+    ";id", "|id", "whoami", "&&", "uname", "cat /", "/bin/", "/etc/passwd",
+    # path traversal / file inclusion
+    "../", "..%2f", "etc/passwd", "php://", "file://",
+    # scanning / brute force
+    "nmap", "masscan", "portscan", "failed password", "authentication failure",
 ]
+
+
+def has_attack_keyword(raw_logs) -> int:
+    """1 if any raw log line carries an attack payload indicator, else 0.
+    Checks the raw text and its URL-decoded form. Shared by the triage feature
+    extractor, the SIEM sampler and the training-set exporter so they agree."""
+    joined = " ".join(raw_logs or [])
+    hay = joined.lower() + "\n" + unquote(joined).lower()
+    return 1 if any(kw in hay for kw in ATTACK_KEYWORDS) else 0
 
 SEVERITY_NUM = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
@@ -85,8 +108,7 @@ class TriageAgent:
         risk_score = float(state.get("risk_score", 0) or 0)
         severity_num = SEVERITY_NUM.get((state.get("severity") or "").lower(), 1)
 
-        haystack = " ".join(state.get("raw_logs", [])).lower()
-        has_keyword = 1 if any(kw in haystack for kw in ATTACK_KEYWORDS) else 0
+        has_keyword = has_attack_keyword(state.get("raw_logs", []))
 
         request_count = state.get("log_count", 0)
 

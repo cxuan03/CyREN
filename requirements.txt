@@ -10,6 +10,7 @@ langgraph==0.2.28
 langchain-core==0.3.9
 
 # ---- Triage: ML classifier ----
+scipy==1.17.1        # xgboost/sklearn need it; a broken build breaks both
 xgboost==2.1.1
 scikit-learn==1.5.2
 pandas==2.2.3

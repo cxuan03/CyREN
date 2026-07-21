@@ -424,16 +424,19 @@ class SiemService:
                            key=lambda s: _SEVERITY_RANK.get(s.lower(), 0))
             timestamps = sorted(a.get("timestamp", "") for a in alerts if a.get("timestamp"))
 
-            # prefer the real log lines recovered from the source index; fall
-            # back to the alert messages for rules that carry them
-            samples, seen = [], set()
+            # Collect the candidate log lines, then keep payload-bearing lines
+            # first so the 50-line sample represents actual attack strings even
+            # when benign traffic to the same path dominates the volume (this
+            # is what lets has_keyword see a real payload).
+            from app.agents.triage import has_attack_keyword
+            seen, uniq = set(), []
             for alert in alerts:
                 for line in (alert.get("source_logs") or []) or [alert.get("message", "")]:
                     if line and line not in seen:
                         seen.add(line)
-                        samples.append(line)
-                if len(samples) >= 50:
-                    break
+                        uniq.append(line)
+            uniq.sort(key=lambda ln: 0 if has_attack_keyword([ln]) else 1)
+            samples = uniq[:50]
 
             events.append({
                 "source_ip": source_ip,

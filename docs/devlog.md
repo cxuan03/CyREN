@@ -737,3 +737,59 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
   PORTSCAN 规则。做训练标签时，只有 .160 的 **SQL/XSS/FI/Command Injection**（低计数、
   无 payload、status=logged）才是干净的良性负样本；SSH/PortScan 那两条要排除，或修
   `benign_traffic.sh`（SSH 用正确密码、放慢浏览节奏避免触发端口扫描）。
+
+---
+
+## 2026-07-20 — 训练集导出脚本 + has_keyword 修复（URL 编码 + 采样）
+
+### 做了什么
+
+新增 `scripts/export_training_set.py`：从数据库事件导出带标签的 CSV 训练集。
+
+- **按源 IP 打标签**：.104/.150/.151 → 1（attack），.160 → 0（benign），其他源跳过。
+- **剔除污染样本**：.160 的 SSH Brute Force / Port Scan 不算良性（良性 SSH 用错密码
+  记了 Failed password，快速浏览触发了 PORTSCAN），只保留 .160 的
+  SQL/XSS/FI/Command Injection 做干净负样本。
+- **特征**：`rule_encoded, risk_score, severity_num, has_keyword, request_count`
+  （与 train_triage 对齐，直接可喂）+ 附加行为特征 `duration_seconds,
+  request_rate_per_min`（train_triage 默认忽略，想用就扩 FEATURES）。
+- **source_ip 绝不进训练 CSV**（只用于生成 label）；单独写 `manifest.csv`
+  （event_id/source_ip/rule/label）供审计，训练文件里零 IP。
+- 给 `train_triage.py` 加 `--data <csv>`，直接读导出的 CSV 训练（缺省仍用内置合成数据）。
+
+### 关键修复：has_keyword 在 URL 编码日志下失效
+
+导出时发现 `has_keyword` 对真攻击也几乎全是 0——因为 ① Apache 日志里 payload 是
+**URL 编码**的（`id=1%27%20UNION%20SELECT`），旧的小写短语匹配不上；② `raw_log_sample`
+只采 50 行，被近期反复打的 `id=1` 良性循环占满，没采到 payload 行。
+
+- `triage.has_attack_keyword()`：**URL 解码后再匹配** + 扩充指标词（union/select/%27/
+  <script/onerror/;id/../etc/passwd/PORTSCAN/Failed password 等，且保证 benign 的
+  id=1/name=John/ip=127.0.0.1/include.php 不误命中）。triage、siem、导出脚本共用同一函数。
+- `siem_service` 聚合采样时**把含 payload 的日志行排前面**，确保 50 行样本能代表真实
+  攻击串（即便良性同路径流量在数量上占多数）。
+- 重新 backfill 后：.104 的 SQL/FI/PortScan/SSH → has_keyword=1，.160 全 → 0，判别恢复。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| scipy 编译扩展坏了（`extension modules cannot be imported`），连累 xgboost/sklearn 导入失败、train_triage 跑不了 | `pip install --force-reinstall --no-cache-dir scipy`（→1.17.1）；requirements 固定 scipy |
+| Command Injection payload 在 POST body，Apache access log 不记录 → has_keyword 看不到 | 固有限制：cmd 注入只有路径匹配，无 payload 特征（已如实标注） |
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- 导出：20 行（16 attack / 4 benign），.160 SSH/PortScan 2 条已剔除，训练 CSV 无 source_ip。
+- `train_triage.py --data data/training_set.csv` 端到端跑通，模型训练成功，
+  **has_keyword 特征重要性 0.94**（主判别信号）。
+
+### 给用户的数据质量提醒（重要）
+
+1. **样本太少**（16/4），且 .104 的部分事件其实是反复打 `id=1`/`name=John` 的良性循环
+   （53 小时、2545 条）——真 sqlmap payload 只占约一半。建议查清是什么在反复打 id=1，
+   并**重新跑一次干净的 sqlmap/攻击**再导出。
+2. **按 IP 打标签有噪声**：攻击 IP 也会发一些良性样的单个请求（has_keyword=0、count=1-2），
+   被标成 attack 却和 benign 无法区分。想要更干净可只保留 has_keyword=1 或高 request_count
+   的攻击样本。
+3. cmd 注入 payload 在 POST body、Apache 不记录，这类只能靠路径 + 计数，无 payload 特征。

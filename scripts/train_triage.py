@@ -105,9 +105,30 @@ def generate_training_data() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def load_csv(path: str) -> "pd.DataFrame":
+    """Load a labelled CSV exported by scripts/export_training_set.py.
+    Only the model FEATURES + label are used; any extra columns (behavioural
+    features, etc.) are ignored, and source_ip is intentionally not present."""
+    df = pd.read_csv(path)
+    missing = [c for c in FEATURES + ["label"] if c not in df.columns]
+    if missing:
+        raise SystemExit(f"CSV is missing required columns: {missing}")
+    return df[FEATURES + ["label"]]
+
+
 def main():
-    print("Generating training data from labelled attack patterns...")
-    df = generate_training_data()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", help="labelled CSV (from export_training_set.py); "
+                                    "default uses the built-in synthetic patterns")
+    args = ap.parse_args()
+
+    if args.data:
+        print(f"Loading training data from {args.data} ...")
+        df = load_csv(args.data)
+    else:
+        print("Generating training data from labelled attack patterns...")
+        df = generate_training_data()
     X, y = df[FEATURES], df["label"]
 
     X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
