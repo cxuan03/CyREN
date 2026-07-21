@@ -114,35 +114,40 @@ class InvestigationAgent:
         return docs
 
     def _build_prompt(self, state: AgentState, techniques: list) -> str:
-        ti = state.get("threat_intel", {})
-        asset = state.get("asset", {})
-        vuln = state.get("vulnerability", {})
-        return (
-            "You are a SOC analyst assistant. Analyse the security event below "
-            "using the provided context. Give particular weight to whether the "
-            "target is a critical asset and whether it has a matching unpatched "
-            "vulnerability, because those decide how urgent this is. Respond as "
+        """Compact prompt: only real context is included (empty enrichment
+        fields are skipped) and the log sample is trimmed, to keep input
+        tokens low. The model is asked to be brief to keep output tokens low."""
+        lines = [
+            "You are a SOC analyst assistant. Analyse this event and reply as "
             'strict JSON with keys "what_happened", "what_could_go_wrong", '
-            '"what_should_be_done", and "urgency" (one of IMMEDIATE, HIGH, '
-            "MEDIUM, LOW).\n\n"
-            f"Event:\n"
-            f"- Source IP: {state.get('source_ip')}\n"
-            f"- Attack type: {state.get('attack_type')}\n"
-            f"- Rule: {state.get('rule')}\n"
-            f"- Log count: {state.get('log_count')}\n"
-            f"- Sample logs: {json.dumps(state.get('raw_logs', [])[:5])}\n\n"
-            f"MITRE ATT&CK context:\n{json.dumps(techniques)}\n\n"
-            f"Threat intelligence on the source:\n"
-            f"- Scope: {ti.get('scope')}, known bad: {ti.get('known_bad')}, "
-            f"score: {ti.get('score')}, sources: {ti.get('sources')}\n\n"
-            f"Target asset:\n"
-            f"- Name: {asset.get('name')}, criticality: {asset.get('criticality')}, "
-            f"owner: {asset.get('owner')}, services: {asset.get('services')}\n\n"
-            f"Target vulnerabilities:\n"
-            f"- Exploitable by this attack: {vuln.get('exploitable')}, "
-            f"matching CVEs: {vuln.get('matching_cves')}, "
-            f"total known: {vuln.get('vuln_count')}\n"
-        )
+            '"what_should_be_done", "urgency" (IMMEDIATE|HIGH|MEDIUM|LOW). '
+            "Keep each text field to 1-2 sentences.",
+            "",
+            f"Attack: {state.get('attack_type')} | rule: {state.get('rule')} | "
+            f"source: {state.get('source_ip')} | logs: {state.get('log_count')}",
+        ]
+        if techniques:
+            lines.append("MITRE: " + ", ".join(str(t) for t in techniques))
+
+        # sample logs: at most 3, each truncated
+        sample = [str(x)[:180] for x in (state.get("raw_logs") or [])[:3]]
+        if sample:
+            lines.append("Sample logs:\n" + "\n".join(sample))
+
+        # enrichment: include only fields that actually carry information
+        ti = state.get("threat_intel") or {}
+        if ti.get("known_bad") or ti.get("score"):
+            lines.append(f"Source reputation: known_bad={ti.get('known_bad')}, "
+                         f"score={ti.get('score')}, sources={ti.get('sources')}")
+        asset = state.get("asset") or {}
+        if asset.get("name") or asset.get("criticality"):
+            lines.append(f"Target asset: {asset.get('name')} "
+                         f"(criticality {asset.get('criticality')})")
+        vuln = state.get("vulnerability") or {}
+        if vuln.get("matching_cves") or vuln.get("exploitable"):
+            lines.append(f"Vulnerabilities: exploitable={vuln.get('exploitable')}, "
+                         f"CVEs={vuln.get('matching_cves')}")
+        return "\n".join(lines)
 
     @staticmethod
     def _placeholder(reason: str) -> dict:
@@ -165,6 +170,7 @@ class InvestigationAgent:
                 model=settings.GROQ_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.2,
+                max_tokens=settings.GROQ_MAX_TOKENS,
                 response_format={"type": "json_object"},
             )
         except Exception as exc:               # noqa: BLE001

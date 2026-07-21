@@ -63,9 +63,14 @@ class Settings:
 
     # ---- Investigation ----
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-    # Llama 4 Scout was retired from Groq; 3.3-70b is the current general
-    # instruct model. Run scripts/check_llm.py to list what a key can access.
-    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    # Llama 4 Scout was retired from Groq (404 model_not_found). 8b-instant is
+    # the default: it has a much larger free-tier token budget and costs fewer
+    # tokens per call than 70b, which matters for the daily rate limit. Switch
+    # to llama-3.3-70b-versatile in .env for higher quality when quota allows.
+    # Run scripts/check_llm.py to list what a key can access.
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    # Cap the analysis length to save output tokens (they count toward quota).
+    GROQ_MAX_TOKENS = int(os.getenv("GROQ_MAX_TOKENS", "500") or 500)
     CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "data/chroma")
     CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "mitre_attack")
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

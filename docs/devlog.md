@@ -617,3 +617,42 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
   改成可访问的地址，邮件链接才对外可用。
 - 响应式需人工在浏览器缩放/DevTools 设备模式下核验（in-app 浏览器禁访问 localhost）。
 - 多数真实攻击事件被分类为 low（triage 置信度低），属模型问题，待用更多标注数据重训。
+
+---
+
+## 2026-07-20 — 省 Groq token：换 8b-instant + 压缩 prompt + 输出封顶
+
+### 现状核对（回答用户）
+
+- **`.env` 配置正确，不该改回 llama-4-scout**：Scout 已被 Groq 下架
+  （catalog 查不到，调用返回 404 model_not_found），这正是之前从 Scout 换成
+  70b 的原因。
+- 429 根因：`llama-3.3-70b-versatile` 免费额度仅 10 万 token/天，70b 每次调用
+  吃得多，跑几个事件就用完。
+- "low risk 跳过 LLM" 之前已实现（`investigation.run()` 里 low 直接返回）。
+
+### 做了什么
+
+1. **默认模型 → `llama-3.1-8b-instant`**（settings 默认 + .env）：8b 免费额度远大于
+   70b，且是**独立配额**（70b 用完 8b 仍可用，已实测），单次也更省。70b 可随时在
+   .env 切回换质量。
+2. **压缩 prompt**（`_build_prompt` 重写）：精简指令；**空的富化字段
+   （threat_intel/asset/vuln，实验里大多 unknown）不再塞进 prompt**；日志样本
+   5→3 条且每条截断 180 字符；要求每字段 1-2 句（同时省输出 token）。
+   实测压缩后约 173 token（旧版约 2 倍）。
+3. **输出封顶** `GROQ_MAX_TOKENS`（默认 500），`_ask_llm` 传 `max_tokens`。
+4. low risk 跳过 LLM——保留。
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- 8b 真实调用成功（即便 70b 已 429）：压缩 prompt ~173 token，返回干净 JSON。
+- `reanalyse_events.py` 用 8b 重跑了 3 个之前 429 占位的 high/uncertain 事件
+  （#5/#8/#21），现均为真实分析、`llm_error` 为 none，旧报告已失效待重生成。
+
+### 省 token 效果小结（给用户）
+
+- 输入：每次调用 prompt 约减半（~350→~173 token）。
+- 输出：从不封顶 → 封顶 500 token。
+- 模型：8b-instant 免费配额远大于 70b（独立计），基本告别 429。
+- 已有：low risk 不调 LLM，只有 high/uncertain 才花 token。
