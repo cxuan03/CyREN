@@ -656,3 +656,38 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
 - 输出：从不封顶 → 封顶 500 token。
 - 模型：8b-instant 免费配额远大于 70b（独立计），基本告别 429。
 - 已有：low risk 不调 LLM，只有 high/uncertain 才花 token。
+
+---
+
+## 2026-07-20 — 良性流量生成脚本（分类器的负样本）
+
+### 背景
+
+论文要求训练集"含真威胁 + 良性流量以区分真/假阳性"，但此前只有攻击流量。
+关键点：现有检测规则**按 URL 路径匹配**（`vulnerabilities/sqli` 等），所以良性
+流量若正常访问这些漏洞演示页也会告警——这恰好是需要的**假阳性负样本**：同一路径、
+无攻击 payload、请求速率正常，分类器要学会与真攻击区分。
+
+### 做了什么
+
+新增 `lab/benign_traffic.sh`（Kali 或任意主机跑），从专用良性 IP **192.168.56.160**
+产生三类正常流量：
+
+1. **基线浏览**：index/about/instructions、CSS/JS/图片、正常登录——**不触发任何规则**，
+   纯正常日志进 ELK。
+2. **合法使用漏洞演示页**：`sqli/?id=1`、`xss_r/?name=John`、`exec` ping `127.0.0.1`
+   （无 `;|&`）、`fi/?page=include.php`，带 1–4 秒"人类"停顿、低请求量——触发路径规则
+   但实为良性＝**假阳性样本**（训练价值最高的一类）。
+3. **正常 SSH**：用**正确密码**登录（sshpass，需目标真实账号）跑 `whoami; uptime`——
+   日志是 `Accepted password` 而非 `Failed`，**不触发暴力破解阈值规则**。
+
+复用攻击脚本的约定：私网地址安全校验、`ip route replace <target> src 192.168.56.160`
+统一控制源 IP、DVWA 正常登录、`--only web|ssh`/`--yes`/`ROUNDS=`/`SSH_USER/PASS=` 参数、
+退出清理别名与路由。`README_lab.md` 补充用法 + 如何构建带标签训练集（.104/.150/.151=
+真阳性，.160=良性/假阳性；在 Human Approval 里 dismiss .160 事件即记为 false_positive
+喂持续学习，或导出训练集时按源 IP 打标）。
+
+### 验证
+
+- `bash -n` 语法通过。
+- 端到端需在 Kali/Target VM 上跑（本机无靶场）。
