@@ -230,12 +230,17 @@ web_delivery 流量 ELK 可见（DVWA exec 请求带一行下载器 → payload 
 4. **数据质量前提**：此前发现 .104 有反复打 `id=1` 的良性循环污染。Part A 重打前先查清
    那个循环、清掉旧脏数据，否则对比数据不干净。
 
-## 待拍板决定
+## 已定决定（2026-07-21）
 
-1. **Metasploit 靶子**：① web_delivery 复用 DVWA / ③ 加 Metasploitable VM / 两者都要？
-2. **攻击者 IP 规模**：扩到几个？（建议 6，每个一种独特手法）
-3. **`react-full` 的 LLM**：是否允许切到更强的 70b/llama-4（更好但更慢更耗额度），
-   baseline/lite 保持 8b？
+1. **Metasploit 靶子 = ③ Metasploitable2 VM**（几十个现成真实 exploit，最多样）；
+   有余力再叠 ① web_delivery（复用 DVWA 命令注入拿 Meterpreter）。
+2. **攻击者 IP = 6 个**，每个一种独特手法。现有 .104/.150/.151（sqlmap / curl /
+   hydra+nmap）+ 新增 .105/.152/.161（手写 curl SQLi / medusa / masscan）。
+3. **`react-full` 允许切 70b/llama-4**，但**只对 uncertain / 复杂事件**用；
+   baseline 与 react-lite 保持 `llama-3.1-8b-instant`。
+4. **（补充）分类器对比**：Part A 数据量足够后，用统一训练集对比
+   **XGBoost / RandomForest / SVM / LogisticRegression**，指标
+   accuracy / precision / recall / F1（见 M5）。
 
 ## 推进顺序与里程碑
 
@@ -247,6 +252,16 @@ web_delivery 流量 ELK 可见（DVWA exec 请求带一行下载器 → payload 
    打一批新数据、验证 ingest/分类器/攻击链。
 3. **M2 — Part B 骨架**：`INVESTIGATION_MODE` 开关 + `tools.py` + 分流路由（baseline 仍默认）。
 4. **M3 — Part B agent**：react-lite → react-full → 威胁狩猎 → trace。
-5. **M4 — 对比**：`compare_investigations.py` 出三档对比表，供论文。
+5. **M4 — Agent 对比**：`compare_investigations.py` 出三档对比表，供论文。
+6. **M5 — 分类器对比**：Part A 数据量足够后，用统一导出的训练集
+   （`export_training_set.py`）对比 XGBoost / RandomForest / SVM / LogisticRegression，
+   报告 accuracy / precision / recall / F1（+ 混淆矩阵 / 特征重要性）。
+   新脚本 `scripts/compare_classifiers.py`，复用现有 `FEATURES`，不改在线推理。
 
 每步一功能一 commit + devlog，改核心流水线先 `pytest` 全绿。
+
+### Part A 第一步（进行中）
+
+`lab/attack_multitool.sh`：同类攻击的多工具变体，从 **3 个新源 IP**
+（.105 手写 curl SQLi / .152 medusa / .161 masscan）驱动，配合 `attack_dvwa.sh`
+凑齐 6 个攻击者 IP。纯新增脚本，**不碰检测规则、不碰核心流水线**，零风险。
