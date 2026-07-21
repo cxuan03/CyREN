@@ -36,6 +36,22 @@ class Settings:
     ELASTICSEARCH_USER = os.getenv("ELASTICSEARCH_USER", "elastic")
     ELASTICSEARCH_PASSWORD = os.getenv("ELASTICSEARCH_PASSWORD", "")
     ELASTIC_ALERT_INDEX = os.getenv("ELASTIC_ALERT_INDEX", ".alerts-security.alerts-default")
+
+    # Where events come from:
+    #   "filebeat" (default) - CyREN reads the detection-rule *definitions*
+    #       from Kibana, then matches those queries against the raw filebeat
+    #       logs itself. This does NOT depend on the Kibana detection engine
+    #       running, so traffic (attack AND benign) becomes events reliably.
+    #   "alerts" - read the Kibana security alert index (only works while the
+    #       Kibana detection rules are enabled and firing).
+    #   "both" - union of the two (may double-count a log that is both).
+    INGEST_MODE = os.getenv("INGEST_MODE", "filebeat")
+    FILEBEAT_INDEX = os.getenv("FILEBEAT_INDEX", "filebeat*")
+    # Kibana index holding the detection-rule definitions (query, index, ...).
+    KIBANA_RULES_INDEX = os.getenv("KIBANA_RULES_INDEX", ".kibana_alerting_cases*")
+    # Max raw docs pulled per rule per poll in filebeat mode (caps log_count).
+    FILEBEAT_MAX_DOCS = int(os.getenv("FILEBEAT_MAX_DOCS", "3000") or 3000)
+
     # How far back each poll looks. Lab alerts are generated in bursts and
     # then sit idle for days, so a 24h window silently goes empty between
     # sessions; a week keeps the whole experiment in view. Use

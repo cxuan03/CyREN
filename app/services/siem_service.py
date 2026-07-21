@@ -1,13 +1,20 @@
 """
-SIEM service: reads alerts from Elasticsearch and aggregates them into events.
+SIEM service: reads security telemetry from Elasticsearch and aggregates it
+into events. Raw logs sharing the same source IP and the same detection rule
+become one event, with log_count recording how many entries were folded in.
 
-Aggregation rule (matches Chapter 3): raw logs sharing the same source IP and
-the same detection rule become one event, with log_count recording how many
-raw entries were folded in.
+Two ingest modes (settings.INGEST_MODE):
 
-The query targets the Kibana security alert index (default
-`.alerts-security.alerts-default`), filtering on documents that carry
-`kibana.alert.rule.name` -- the same query the validated prototype used.
+  * "filebeat" (default): read the detection-rule *definitions* from Kibana,
+    then run those queries directly against the raw filebeat logs and build
+    events from the matches. This does NOT depend on the Kibana detection
+    engine running, so both attack and benign traffic become events reliably.
+
+  * "alerts": read the Kibana security alert index
+    (`.alerts-security.alerts-default`, docs carrying `kibana.alert.rule.name`).
+    Only works while the Kibana detection rules are enabled and firing.
+
+Both paths share the same IP extraction, blacklist filtering and aggregation.
 """
 import ipaddress
 import logging
@@ -31,6 +38,30 @@ _IP_RE = re.compile(r"\b(\d{1,3}(?:\.\d{1,3}){3})\b")
 _FROM_IP_RE = re.compile(r"\bfrom (\d{1,3}(?:\.\d{1,3}){3})\b")
 
 _SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+
+# Used only if the detection-rule definitions cannot be read from Kibana. The
+# queries mirror the lab rules (path-based, so real payloads and benign visits
+# both match); query_string needs uppercase AND.
+_FALLBACK_RULES = [
+    {"name": "SQL Injection Detected",
+     "query": 'host.name: "target-server" AND message: "vulnerabilities/sqli"',
+     "index": ["filebeat*"], "severity": "high", "risk_score": 73},
+    {"name": "XSS Attack Detected",
+     "query": 'host.name: "target-server" AND message: "vulnerabilities/xss_r"',
+     "index": ["filebeat*"], "severity": "medium", "risk_score": 47},
+    {"name": "Command Injection Detected",
+     "query": 'host.name: "target-server" AND message: "vulnerabilities/exec"',
+     "index": ["filebeat*"], "severity": "high", "risk_score": 73},
+    {"name": "File Inclusion Detected",
+     "query": 'host.name: "target-server" AND message: "vulnerabilities/fi"',
+     "index": ["filebeat*"], "severity": "medium", "risk_score": 47},
+    {"name": "SSH Brute Force Detected",
+     "query": 'host.name: "target-server" AND message: "Failed password"',
+     "index": ["filebeat*"], "severity": "critical", "risk_score": 90},
+    {"name": "Port Scan Detected",
+     "query": 'host.name: "target-server" AND message: "PORTSCAN"',
+     "index": ["filebeat*"], "severity": "low", "risk_score": 21},
+]
 
 
 def _parse_blacklist(raw: str):
@@ -66,6 +97,18 @@ def _is_blacklisted(ip: str) -> bool:
         except ValueError:
             return False
     return False
+
+
+def _kql_to_lucene(query: str) -> str:
+    """Kibana stores rule queries in KQL, which uses lowercase and/or/not.
+    Elasticsearch query_string is Lucene, where those must be uppercase or they
+    are treated as literal search terms (matching almost everything). Uppercase
+    the operators only OUTSIDE double-quoted values so phrases are untouched."""
+    parts = query.split('"')
+    for i in range(0, len(parts), 2):        # even segments are outside quotes
+        parts[i] = re.sub(r"(?i)(?<![\w.])(and|or|not)(?![\w.])",
+                          lambda m: m.group(1).upper(), parts[i])
+    return '"'.join(parts)
 
 
 def _get(source: dict, dotted: str, default=None):
@@ -148,7 +191,7 @@ class SiemService:
                 size=200,
                 sort=[{"@timestamp": {"order": "asc"}}],
                 query={"bool": {"filter": [
-                    {"query_string": {"query": query}},
+                    {"query_string": {"query": _kql_to_lucene(query)}},
                     {"range": {"@timestamp": {"gte": since, "lte": until}}},
                 ]}},
             )
@@ -265,9 +308,111 @@ class SiemService:
                         "message and its source logs could not be read", unresolved)
         return alerts
 
+    def _rule_defs(self) -> list:
+        """Enabled detection-rule definitions (name, query, index, severity,
+        risk_score), read from Kibana. Used by the filebeat-direct ingest so
+        CyREN matches the same queries the analyst configured, without needing
+        the Kibana detection engine to be running."""
+        try:
+            res = self.es.search(index=settings.KIBANA_RULES_INDEX, size=200,
+                                  query={"term": {"type": "alert"}})
+        except Exception as exc:
+            log.warning("[siem] could not read Kibana rule defs (%s); using fallback set", exc)
+            return _FALLBACK_RULES
+
+        defs = []
+        for hit in res["hits"]["hits"]:
+            a = hit["_source"].get("alert", {})
+            if not a.get("enabled"):
+                continue
+            p = a.get("params", {}) or {}
+            query = p.get("query")
+            if not query:
+                continue
+            idx = p.get("index") or [settings.FILEBEAT_INDEX]
+            defs.append({
+                "name": a.get("name"),
+                "query": query,
+                "index": idx if isinstance(idx, list) else [idx],
+                "severity": p.get("severity", "") or "",
+                "risk_score": p.get("risk_score", 0) or 0,
+            })
+        if not defs:
+            log.warning("[siem] no enabled Kibana rules found; using fallback set")
+            return _FALLBACK_RULES
+        log.info("[siem] using %d detection rule(s) from Kibana for filebeat ingest", len(defs))
+        return defs
+
+    def _query_filebeat(self, hours: int = None) -> list:
+        """Match each detection rule's query directly against the raw filebeat
+        logs and normalise the hits into the same alert shape as _query_alerts.
+        Independent of the Kibana detection engine."""
+        if self.es is None:
+            return []
+        hours = hours or settings.FETCH_WINDOW_HOURS
+        alerts, dropped, unresolved = [], Counter(), 0
+        for rule in self._rule_defs():
+            idx = rule.get("index") or [settings.FILEBEAT_INDEX]
+            try:
+                resp = self.es.search(
+                    index=",".join(idx),
+                    size=settings.FILEBEAT_MAX_DOCS,
+                    sort=[{"@timestamp": {"order": "desc"}}],
+                    query={"bool": {"filter": [
+                        {"range": {"@timestamp": {"gte": f"now-{hours}h", "lte": "now"}}},
+                        {"query_string": {"query": _kql_to_lucene(rule["query"])}},
+                    ]}},
+                )
+            except Exception as exc:
+                log.warning("[siem] filebeat query for rule %r failed: %s", rule["name"], exc)
+                continue
+
+            for hit in resp["hits"]["hits"]:
+                s = hit["_source"]
+                message = (_get(s, "message") or "")[:500]
+                source_ip = _extract_source_ip(s, message)
+                if source_ip == "unknown":
+                    unresolved += 1
+                    continue
+                if _is_blacklisted(source_ip):
+                    dropped[source_ip] += 1
+                    continue
+                alerts.append({
+                    "id": hit["_id"],
+                    "timestamp": _get(s, "@timestamp", ""),
+                    "rule": rule["name"],
+                    "severity": rule.get("severity", ""),
+                    "risk_score": rule.get("risk_score", 0),
+                    "source_ip": source_ip,
+                    "dest_ip": _get(s, "destination.ip") or _get(s, "host.name", ""),
+                    "message": message,
+                    "source_logs": [message],
+                })
+
+        by_rule = Counter(a["rule"] for a in alerts)
+        log.info("[siem] filebeat ingest: %d matching log(s) over %dh across %d rule(s): %s",
+                 len(alerts), hours, len(by_rule), dict(by_rule))
+        if dropped:
+            log.info("[siem] dropped %d blacklisted-source log(s): %s",
+                     sum(dropped.values()), dict(dropped))
+        if unresolved:
+            log.info("[siem] %d matching log(s) had no extractable source IP", unresolved)
+        return alerts
+
     def fetch_aggregated_events(self, hours: int = None) -> list:
-        """Group raw alerts by (source_ip, rule) into events ready for triage."""
-        raw = self._query_alerts(hours=hours)
+        """Group raw alerts by (source_ip, rule) into events ready for triage.
+
+        The source of the raw alerts depends on INGEST_MODE:
+        filebeat (default) matches rule queries against raw logs; alerts reads
+        the Kibana alert index; both unions them.
+        """
+        mode = getattr(settings, "INGEST_MODE", "alerts")
+        if mode == "filebeat":
+            raw = self._query_filebeat(hours=hours)
+        elif mode == "both":
+            raw = self._query_alerts(hours=hours) + self._query_filebeat(hours=hours)
+        else:
+            raw = self._query_alerts(hours=hours)
         buckets = defaultdict(list)
         for alert in raw:
             key = (alert.get("source_ip", "unknown"), alert.get("rule", "unknown"))

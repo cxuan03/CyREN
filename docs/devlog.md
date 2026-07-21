@@ -691,3 +691,49 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
 
 - `bash -n` 语法通过。
 - 端到端需在 Kali/Target VM 上跑（本机无靶场）。
+
+---
+
+## 2026-07-20 — 数据流根因 + 新增 filebeat 直取模式（让良性 .160 能进事件）
+
+### 查清楚的数据流（回答用户）
+
+- CyREN 的 `siem_service` **只查 Kibana 告警索引** `.alerts-security.alerts-default`
+  （别名 → `.internal.alerts-security.alerts-default-000001`），过滤 `exists:
+  kibana.alert.rule.name`。它**不查 filebeat、不自己按规则匹配**——完全依赖 Kibana
+  检测引擎先把日志变成告警。
+- "矛盾"解开：SQL Injection 规则**发过 431 条告警**（最新 10:10），Kibana Alerts 页
+  "No results" 只是**时间筛选器**问题（默认只看最近，告警是更早的）。
+- 真正的坑：**所有规则的告警在 ~10:11 之后就停了**（检测引擎没在跑），而良性 .160
+  是 14:52 打的——.160 的日志在 filebeat 里（sqli×7/xss×9/exec×15/fi×3），但告警索引里
+  0 条提到 .160，所以 CyREN（只读告警索引）永远抓不到 .160。
+
+### 做了什么：新增 filebeat 直取模式
+
+`INGEST_MODE`（默认 **filebeat**）：CyREN 从 Kibana 读**规则定义**（`_rule_defs()`
+读 `.kibana_alerting_cases*` 里 enabled 规则的 query，读不到时用 `_FALLBACK_RULES`），
+然后**自己拿这些 query 去 filebeat 匹配**（`_query_filebeat()`），提取源 IP、过黑名单、
+聚合成事件。不再依赖 Kibana 检测引擎是否在跑，攻击和良性都能稳定进来。
+`alerts` 模式（旧行为）和 `both` 仍可选。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| Kibana 规则 query 是 KQL（小写 `and`），ES query_string 是 Lucene，小写 `and` 被当普通词 → 查询几乎匹配所有 target-server 日志、全归到 .104（每规则 2545 条） | 新增 `_kql_to_lucene()`：仅把**引号外**的 and/or/not 转大写；`_query_filebeat` 和 threshold 回查都用它 |
+| filebeat 单规则可能匹配上万条 | `FILEBEAT_MAX_DOCS`（默认 3000）封顶每规则每轮拉取量 |
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- filebeat 模式实测：21 个聚合，源 IP = .104/.150/.151/**.160**，各源各规则计数真实
+  区分（.160 的 sqli=7/xss=9/exec=15/fi=3 与 filebeat 原始计数完全一致），黑名单 .1 不在。
+- 数据库现已含 .160 的 6 个事件（scheduler filebeat 模式自动抓入）。
+
+### 给用户的数据质量提醒
+
+- .160 现在也有 **SSH Brute Force（186）和 Port Scan（70）** 事件——这**不是良性**：
+  良性 SSH 用了错误密码（生成 "Failed password"），良性浏览的高连接速率触发了 iptables
+  PORTSCAN 规则。做训练标签时，只有 .160 的 **SQL/XSS/FI/Command Injection**（低计数、
+  无 payload、status=logged）才是干净的良性负样本；SSH/PortScan 那两条要排除，或修
+  `benign_traffic.sh`（SSH 用正确密码、放慢浏览节奏避免触发端口扫描）。
