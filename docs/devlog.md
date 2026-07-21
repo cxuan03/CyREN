@@ -793,3 +793,33 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
    被标成 attack 却和 benign 无法区分。想要更干净可只保留 has_keyword=1 或高 request_count
    的攻击样本。
 3. cmd 注入 payload 在 POST body、Apache 不记录，这类只能靠路径 + 计数，无 payload 特征。
+
+---
+
+## 2026-07-21 — FYP2 升级：方案定稿 + 安全绳（分支/标签）
+
+### 做了什么
+
+1. **完整方案** → `docs/upgrade_plan.md`：Part A（真实攻击多样性：Metasploit
+   web_delivery 链 / 多工具变体 / 更多攻击者 IP / 定时多阶段攻击链）+ Part B
+   （Investigation 升级为三档 agent：baseline / react-lite / react-full，含
+   "分流 gating + 工具预跑 + 上下文纪律" 省 token 设计，三档在同一批事件上对比）。
+   含要动的文件清单、工作量估算、baseline 对比指标、风险与推进里程碑。
+2. **安全绳**：
+   - 确认 baseline 已 commit 干净（工作树无未提交改动），`pytest` 5 个全绿。
+   - 打标签 `baseline-pre-upgrade`（指向 main 的 f27ce0d），随时精确切回。
+   - 开 `feat/upgrade` 分支做所有升级工作；`main` 冻结为可跑 baseline。
+   - 约定所有 agent 升级 behind `INVESTIGATION_MODE` 开关，
+     `investigation.py`（baseline）一行不改。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| 怕升级把能跑的系统改坏、切不回去 | 三重安全绳：标签定位 baseline + 分支隔离 + 运行时开关旁路（baseline 代码不动） |
+| ReAct agent 烧 token | 三档设计把"agent 化"与"每步调 LLM"解耦：react-lite 确定性预跑工具、仅 1 次 LLM 综合；react-full 才多步循环，且前面用纯规则分流挡掉 70–90% |
+
+### 下一步
+
+M0 完成。待用户拍板三个决定（Metasploit 靶子 / IP 规模 / react-full 的 LLM）后，
+开始 M1 = Part A 第一步。本步不动核心代码。
