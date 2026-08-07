@@ -858,3 +858,32 @@ M0 完成。待用户拍板三个决定（Metasploit 靶子 / IP 规模 / react-
 ### 下一步
 
 用户重测 masscan(.161) 后,继续 Part A 下一步（Metasploitable2 接入 + 新检测规则联动）。
+
+---
+
+## 2026-07-21 — masscan 验证通过 + PORTSCAN 规则持久化（systemd）
+
+### 做了什么
+
+1. **确认 Part A 第一步完成**：masscan(.161) 实验室验证成功——靶机记录
+   `SRC=192.168.56.161` 的 PORTSCAN 日志，CyREN 出现 "192.168.56.161 Port Scanning"
+   事件。三个新工具（.105 手写 SQLi / .152 medusa / .161 masscan）全部打通，
+   10.0.2.2 噪音已清。
+2. **PORTSCAN 规则持久化**（`lab/target_setup.sh` 重写）：
+   - 之前只 "best-effort" 存盘，依赖 iptables-persistent/netfilter-persistent
+     装了且配置对才生效，重启易丢。
+   - 改成自带 **systemd oneshot 服务** `cyren-portscan.service`：规则逻辑抽到
+     幂等 helper `/usr/local/sbin/cyren-portscan-rule.sh`，setup 时装一次、开机
+     由服务自动重装。不依赖任何持久化包；helper 幂等（先删后加，不叠重复）。
+   - `network-pre.target` 时机：规则在网络起来前应用，扫描流量不会漏过。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| 旧持久化是 iptables-save 到 /etc/iptables/rules.v4，但没装 iptables-persistent 时开机不会加载 → 重启丢规则 | 换成自带 systemd oneshot 服务开机重跑幂等 helper，零外部依赖 |
+
+### 验证结果
+
+- `bash -n` 语法通过；pytest 5 全过（未动核心代码，回归确认）。
+- systemd 服务需在靶机上 `systemctl is-enabled cyren-portscan.service` 确认（用户侧）。
