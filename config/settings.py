@@ -62,9 +62,11 @@ class Settings:
     # VirtualBox host-only gateway (the host machine itself). Alerts from
     # these are dropped before an event is created. Comma-separated; each
     # entry may be a single IP or a CIDR range (e.g. "127.0.0.0/8").
+    # 10.0.2.2 is the VirtualBox NAT gateway: SSH/traffic that traverses NAT
+    # reaches the target with this source, so it shows up as a phantom attacker.
     SOURCE_IP_BLACKLIST = os.getenv(
         "SOURCE_IP_BLACKLIST",
-        "127.0.0.0/8,::1,192.168.56.1",
+        "127.0.0.0/8,::1,192.168.56.1,10.0.2.2",
     )
 
     # ---- Background pipeline scheduler ----

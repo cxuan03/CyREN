@@ -823,3 +823,38 @@ ES 标准分词器在 `%20` 处断词，`match_phrase "UNION SELECT"` 匹配不�
 
 M0 完成。待用户拍板三个决定（Metasploit 靶子 / IP 规模 / react-full 的 LLM）后，
 开始 M1 = Part A 第一步。本步不动核心代码。
+
+---
+
+## 2026-07-21 — Part A①：attack_multitool.sh（同类攻击多工具变体）+ 两处修复
+
+### 做了什么
+
+`lab/attack_multitool.sh`（新增，配合 attack_dvwa.sh 凑齐 6 个攻击者 IP）：
+同类攻击的多工具变体，从 3 个新源 IP 驱动，复用现有路径规则，不碰核心流水线。
+
+| 新 IP | 手法 | 工具 | 与现有区别 |
+|---|---|---|---|
+| .105 | SQL 注入 | 手写 curl（UNION/boolean/error/time-based 真实 payload） | 请求少、无 sqlmap UA，签名和 .104 的 sqlmap 不同 |
+| .152 | SSH 暴破 | medusa | 不同工具/速率,区别于 .151 的 hydra |
+| .161 | 端口扫描 | masscan（高速率） | raw socket 高速,区别于 .151 的 nmap |
+
+实测：.105 SQLi、.152 medusa 成功进入 CyREN。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 根因 | 解决 |
+|---|---|---|
+| masscan(.161) 命令行扫到开放端口,但没生成 .161 的 Port Scan 事件 | masscan 用自己的 raw-socket 发包,**不认 OS 的 `ip route src`**（nmap -sT 认）。VirtualBox host-only 无网关,masscan ARP 不到网关就回退到 OS 默认源 IP → 靶机 PORTSCAN 日志里 SRC 不是 .161 → 无 .161 事件 | 脚本自动解析靶机 MAC（`ping` 填 ARP + `ip neigh`）作 `--router-mac`,靶机 L2 直达,强制 masscan 从 `--adapter-ip .161` 直发到靶机 MAC → 靶机记 SRC=.161。留 `MASSCAN_ROUTER_MAC` 覆盖 + 验证提示 |
+| 噪音事件 "10.0.2.2 SSH Brute Force" | 10.0.2.2 是 VirtualBox NAT 网关,NAT 穿透的流量到靶机时源变成它 | 加进 `SOURCE_IP_BLACKLIST`（config/settings.py 默认 + .env,和 127.0.0.1/192.168.56.1 并列）；`purge_blacklisted_events.py` 清掉已入库的 event #33 |
+
+### 验证结果
+
+- `pytest` 5 个全过。
+- 黑名单：`_is_blacklisted('10.0.2.2')=True`、`'192.168.56.161'=False`。
+- 清库：删除 event #33，剩 24 事件 0 噪音。
+- masscan 的 `--router-mac` 修复待实验室重测（.161 是否出 Port Scan 事件）。
+
+### 下一步
+
+用户重测 masscan(.161) 后,继续 Part A 下一步（Metasploitable2 接入 + 新检测规则联动）。
