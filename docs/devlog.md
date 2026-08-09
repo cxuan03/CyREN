@@ -1028,3 +1028,35 @@ Part A 收官。可进入 **Part B**:Investigation 升级为三档 agent
 benign 只有 4 个,数字仅供演示。CyREN 按 (source_ip, rule) 聚合,**同一 IP 重跑只会
 把已有事件的 log_count 变大、不增行**;要加 benign 行必须**换不同良性源 IP**。跑 5 个
 不同 BENIGN_IP → 每个产 4 个干净负样本(SQLi/XSS/FI/CmdInj)→ ≥20。
+
+---
+
+## 2026-07-21 — collect_dataset.sh:grey-zone 混合样本收集(强度随机化)
+
+### 做了什么
+
+新增 `lab/collect_dataset.sh`:用现有真实工具(手写 curl 注入 sqli/xss/cmd/fi、
+hydra、nmap)跑很多短 session,每个 session **随机化强度**(请求数 + 每请求延迟),
+让攻击/良性的 request_count **区间刻意重叠**(grey zone)——迫使分类器学真信号
+(payload 命中 → has_keyword),而不是走"量大=攻击"的捷径。
+
+- **每 session 用一个新源 IP**(攻击池 .170+ / 良性池 .200+):CyREN 按 (source_ip,
+  rule) 聚合,复用 IP 会合并成一个事件,所以要新 IP 才能当独立样本。
+- **按 IP 池打标签**:攻击池=attack,良性池=benign;`source_ip` 只用于打标签、
+  绝不进特征(export 会剔除)。延续既有设计。
+- **每 session 记 timestamp 到 manifest**(timestamp/session_id/label/type/tool/
+  source_ip/planned_requests/delay_range/notes)。
+- 攻击类型加权(path-based sqli/xss/cmd/fi 为主,ssh/scan 偶尔);low-rate 的
+  ssh/scan 可能**不触发**阈值规则——**都如实记进 manifest**。
+- 结束打印攻击/良性 IP 列表 + 现成的 `export_training_set.py --attack-ips ... --benign-ips ...`
+  命令,供 CyREN 主机侧打标签。
+
+### 原则(明确)
+
+这是**收集多样、诚实标注的样本**做更严谨的分类器实验,**不是找规避检测的阈值**;
+触发规则的和没触发的都记录、都带真标签。授权隔离实验室内使用。
+
+### 验证结果
+
+- `bash -n` 语法通过;`--help` 正常。端到端需在 Kali/实验网跑(本机不跑)。
+- manifest 为运行时产物,已 gitignore。
