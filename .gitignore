@@ -10,3 +10,6 @@ data/logs/
 venv/
 data/training_set.csv
 data/training_set_manifest.csv
+
+# git transfer bundles (Kali sync)
+*.bundle

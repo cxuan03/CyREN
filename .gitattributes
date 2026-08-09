@@ -1,0 +1,7 @@
+# Files executed on the Kali/Target Linux VMs must stay LF even though they are
+# edited/committed from Windows (core.autocrlf=true), or Linux fails with
+# "bad interpreter: /bin/sh^M".
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
