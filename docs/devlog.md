@@ -887,3 +887,73 @@ M0 完成。待用户拍板三个决定（Metasploit 靶子 / IP 规模 / react-
 
 - `bash -n` 语法通过；pytest 5 全过（未动核心代码，回归确认）。
 - systemd 服务需在靶机上 `systemctl is-enabled cyren-portscan.service` 确认（用户侧）。
+
+---
+
+## 2026-07-21 — 完整项目实现记录 docs/PROJECT_FULL_RECORD.md（Chapter 4 素材）
+
+### 做了什么
+
+整合 devlog（新旧两份）、两仓库完整 git log、lab/ 全部脚本的实际命令、.env.example、
+README、CLAUDE.md、迁移记忆，以及用户补充的阶段 1–2 实操历史，生成
+`docs/PROJECT_FULL_RECORD.md`：8 个阶段（ELK 搭建/迁移 → 六攻击检测 → 真实攻击工具 →
+四 agent/前端/LLM/噪音 → 良性负样本 → filebeat 直取 → 多工具攻击 → 分布式容器），
+每阶段带**可复制真实命令 + 逐条做什么/为什么/预期结果 + 踩坑 + 验证**，附 git 提交映射、
+文件索引、.env 配置项。
+
+用户补齐三处原 `【需用户确认/补充】`：
+1. Target netplan（`00-installer-config.yaml`，enp0s3 NAT / enp0s8 Host-Only 均 DHCP，
+   .101 经 DHCP 获得）。
+2. LVM 扩容未执行 growpart/pvresize（VG 有空闲空间，直接 lvextend）。
+3. 良性 SSH 未启用（labuser 未建、sshpass 未配），负样本仅来自良性网页流量。
+
+### 关键补充（相比上一版）
+
+阶段 1 从占位变全真实命令：LVM 扩容（lvextend+resize2fs+解只读锁 curl）、Guest
+Additions、docker-elk（9.3.3）、ES 改密码 API（PowerShell Invoke-RestMethod，
+elastic/kibana_system→<ELK_PASSWORD>）、规则 ndjson 导出/导入、完整 filebeat.yml
+（5 filestream，output→192.168.56.1:9200）。
+
+### 验证结果
+
+- 文档正文无残留 `【需用户确认/补充】` 占位。
+- （另）生成排版 PDF 供报告附录。
+
+---
+
+## 2026-07-21 — 分布式容器攻击 4 容器版（lab/docker/ 全套）
+
+### 做了什么
+
+`lab/docker/` 落地 Docker ipvlan L2 的 4 容器分布式攻击（承接已验证通过的
+verify_ipvlan.sh 连通性）：
+
+- `Dockerfile`：`cyren-attacker` 镜像，装齐 sqlmap/hydra/nmap/masscan/medusa/curl
+  + ip/ping，逐工具注释；`attack.sh` 作 ENTRYPOINT。
+- `attack.sh`：入口分发器，按 `-e ATTACK=sqli|hydra|nmap|masscan` 跑对应工具；
+  sqli 自动 DVWA 登录取 cookie，masscan 自动解析 target MAC 作 `--router-mac`，
+  各工具带 gentle 限速默认值，支持 `START_DELAY` 错峰。
+- `docker-compose.yml`：4 服务（sqlmap .120 / hydra .122 / nmap .123 / masscan .124），
+  外部 ipvlan 网络 `hostonly_attackers`，静态 IP + `cpus/mem_limit` 限资源，
+  masscan 加 NET_ADMIN/NET_RAW。
+- `run_distributed.sh`：错峰启动（逐个起、间隔 GAP）+ stop/logs。
+- `passlist.txt`：hydra 错误密码表。
+- `DISTRIBUTED_ATTACK_GUIDE.md`：完整操作手册（构建→建网→起容器→错峰→验证
+  →清理→排查），每步含命令+做什么+为什么+预期+报错排查。
+
+网络参数：`--ip-range 192.168.56.112/28`，`parent=eth1`。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| Docker 默认 bridge 会 NAT，多容器变一个源 IP | ipvlan L2（独立 IP、共用 Kali MAC，无 NAT），已连通性验证 |
+| sqli 容器需要 DVWA 会话 | 入口脚本先 curl 登录取 PHPSESSID+security=low 再跑 sqlmap |
+| masscan 在容器里源归属 | 入口 ping+ip neigh 解析 target MAC 作 --router-mac；需 NET_ADMIN/NET_RAW |
+| 容器静态 IP 可能撞 Host-Only DHCP 池 | 手册步骤 0 提示用 VBoxManage 查池、避开 .112–.127 |
+
+### 验证结果
+
+- `bash -n` attack.sh / run_distributed.sh 语法通过。
+- `docker-compose.yml` 经 YAML 解析器验证，4 服务网络结构一致正确。
+- 端到端 build/run 由用户在 Kali 手动执行（本机不跑 docker）。
