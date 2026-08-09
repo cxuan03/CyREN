@@ -20,7 +20,14 @@ File Inclusion / Command Injection events are kept as clean negatives.
     venv/Scripts/python.exe scripts/export_training_set.py
     ... --attack-ips 192.168.56.104,192.168.56.150,192.168.56.151
     ... --benign-ips 192.168.56.160
+    ... --label-manifest lab/dataset_manifest.csv   # from collect_dataset.sh
     ... --out data/training_set.csv
+
+The easiest path with collect_dataset.sh: copy its dataset_manifest.csv to this
+host and pass --label-manifest; its per-session source_ip + label are read
+directly, so you never hand-paste dozens of session IPs. It is UNIONed with the
+default --attack-ips/--benign-ips, so old fixed-IP data is labelled at the same
+time.
 
 IMPORTANT: source_ip is used ONLY to derive the label; it is NEVER written to
 the training CSV as a feature (that would let the model memorise IPs instead
@@ -75,21 +82,63 @@ def _behaviour(e):
     return round(dur, 1), rate
 
 
+def _load_label_manifest(path):
+    """Read collect_dataset.sh's manifest (has source_ip + label columns) and
+    return (attack_ips, benign_ips). label is 'attack'/'benign' (also accepts
+    1/0). Rows without a usable ip+label are ignored, and duplicate IPs (one
+    session -> one IP) collapse into the set."""
+    atk, ben = set(), set()
+    with open(path, newline="") as fh:
+        for row in csv.DictReader(fh):
+            ip = (row.get("source_ip") or "").strip()
+            lab = (row.get("label") or "").strip().lower()
+            if not ip:
+                continue
+            if lab in ("attack", "1"):
+                atk.add(ip)
+            elif lab in ("benign", "0"):
+                ben.add(ip)
+    return atk, ben
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--attack-ips",
                     default="192.168.56.104,192.168.56.105,192.168.56.120,"
                             "192.168.56.122,192.168.56.124,192.168.56.150,"
                             "192.168.56.151,192.168.56.152,192.168.56.161")
-    ap.add_argument("--benign-ips",
+    ap.add_argument("--benign-ips",   # .160 + the manual benign-alias range .162-.169
                     default="192.168.56.160,192.168.56.162,192.168.56.163,"
-                            "192.168.56.164,192.168.56.165")
+                            "192.168.56.164,192.168.56.165,192.168.56.166,"
+                            "192.168.56.167,192.168.56.168,192.168.56.169")
+    ap.add_argument("--label-manifest",
+                    help="CSV from collect_dataset.sh (has source_ip + label "
+                         "columns); its IPs are UNIONed with --attack-ips/"
+                         "--benign-ips so old fixed IPs and new session IPs are "
+                         "labelled together in one export")
     ap.add_argument("--out", default="data/training_set.csv")
     ap.add_argument("--manifest", default="data/training_set_manifest.csv")
     args = ap.parse_args()
 
     attack_ips = {ip.strip() for ip in args.attack_ips.split(",") if ip.strip()}
     benign_ips = {ip.strip() for ip in args.benign_ips.split(",") if ip.strip()}
+
+    # optional: pull labels straight from collect_dataset.sh's manifest, so you
+    # never hand-paste dozens of session IPs. Unioned with the CLI lists above.
+    if args.label_manifest:
+        m_atk, m_ben = _load_label_manifest(args.label_manifest)
+        attack_ips |= m_atk
+        benign_ips |= m_ben
+        print(f"label-manifest {args.label_manifest}: "
+              f"+{len(m_atk)} attack IP(s), +{len(m_ben)} benign IP(s)")
+
+    # an IP labelled BOTH ways is ambiguous -> drop from both (data integrity)
+    conflict = attack_ips & benign_ips
+    if conflict:
+        print(f"WARNING: {len(conflict)} IP(s) labelled both attack and benign; "
+              f"skipping them: {sorted(conflict)}")
+        attack_ips -= conflict
+        benign_ips -= conflict
 
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     out_path = args.out if os.path.isabs(args.out) else os.path.join(root, args.out)

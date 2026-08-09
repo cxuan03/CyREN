@@ -1060,3 +1060,30 @@ hydra、nmap)跑很多短 session,每个 session **随机化强度**(请求数 +
 
 - `bash -n` 语法通过;`--help` 正常。端到端需在 Kali/实验网跑(本机不跑)。
 - manifest 为运行时产物,已 gitignore。
+
+---
+
+## 2026-07-21 — export_training_set.py 支持 --label-manifest 直接读标签
+
+### 做了什么
+
+- 新增 `--label-manifest <csv>`:直接读 `collect_dataset.sh` 的 manifest
+  (含 source_ip + label 列),自动得到 IP→label,不用手动粘几十个 session IP。
+  与默认 `--attack-ips/--benign-ips` **取并集**——老的固定 IP 数据和新的 session
+  数据一次导出一起打标签。label 接受 attack/benign(也兼容 1/0)。
+- **冲突保护**:同一 IP 被同时标成 attack 和 benign 时,从两边都剔除并告警(数据完整性)。
+- benign 默认 IP 补到 `.166-.169`(用户已用 benign_traffic 跑了 .162-.166,之前默认只到
+  .165,导致 .166 未标)。
+
+### 发现
+
+导出时发现库里已多出 .162–.166 各 4 个良性事件——是用户按上一步建议跑了
+benign_traffic(不同 BENIGN_IP)补的负样本。现训练集 **22 attack / 24 benign,平衡**,
+5 折 CV 可用。source_ip 仍不进特征。
+
+### 验证结果
+
+- `pytest` 全过。
+- 冒烟:不带 manifest = 旧行为(22/24);带 --label-manifest 正确 +N/+N 并 union;
+  故意制造的 attack∩benign 冲突 IP(.104)被正确跳过并告警。
+- CSV 表头无 source_ip;导出 46 行、0 unlabelled。
