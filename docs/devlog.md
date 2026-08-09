@@ -991,3 +991,40 @@ masscan .124 覆盖。要补 .123 可重跑并在 `kern.log` 查 `SRC=192.168.56
 
 Part A 收官。可进入 **Part B**:Investigation 升级为三档 agent
 (baseline / react-lite / react-full,behind INVESTIGATION_MODE),见 upgrade_plan.md。
+
+---
+
+## 2026-07-21 — Objective 3：分类器对比(export 脚本 + Jupyter notebook)
+
+### 做了什么
+
+1. **`scripts/export_training_set.py` 更新**:攻击 IP 扩到
+   .104/.105/.120/.122/.124/.150/.151/.152/.161,良性扩到 .160+.162–.165(备用)。
+   特征 7 个(rule_encoded/risk_score/severity_num/has_keyword/request_count/
+   duration_seconds/request_rate_per_min),**source_ip 绝不进训练 CSV**,confidence/risk
+   也不进(防数据泄漏——它们是现有模型输出)。当前导出 26 行(22 attack / 4 benign)。
+2. **`notebooks/objective3_classifier_comparison.ipynb`** 新增:加载 CSV → 70/30
+   stratified split → 训练 XGBoost/RandomForest/LogisticRegression/SVM(LR/SVM 走
+   StandardScaler pipeline)→ 测试集 accuracy/precision/recall/F1 → 对比表 + 柱状图 +
+   混淆矩阵 + ROC → **stratified k 折 CV**(k 自适应=min(5,最小类),补够 benign 自动升 5 折)
+   → 特征重要性。每段配 markdown 说明。加了 `assert 'source_ip' not in X` 硬校验防泄漏。
+
+### 遇到的问题 & 怎么解决
+
+| 问题 | 解决 |
+|---|---|
+| benign 仅 4 个,5 折 CV 会报错(n_splits>最小类) | CV 的 k 自适应 min(5,最小类),并打印提示补 benign 到 ≥5 |
+| SVC(probability=True) 在极小训练集上内部 CV 会失败 | SVM 不开 probability,ROC 用 decision_function 取分数 |
+| 小数据单次 split 指标不稳(RF 在 8 样本测试集上 1.000) | 加 stratified k 折 CV 做更稳的对比 |
+
+### 验证结果
+
+- `pytest` 全过;notebook 用 `nbconvert --execute` 端到端跑通:0 error、5 张图、
+  指标表 + CV 表都产出。
+- CSV 表头无 source_ip;notebook 内 assert 通过。
+
+### 给用户的下一步(补 benign 数据)
+
+benign 只有 4 个,数字仅供演示。CyREN 按 (source_ip, rule) 聚合,**同一 IP 重跑只会
+把已有事件的 log_count 变大、不增行**;要加 benign 行必须**换不同良性源 IP**。跑 5 个
+不同 BENIGN_IP → 每个产 4 个干净负样本(SQLi/XSS/FI/CmdInj)→ ≥20。

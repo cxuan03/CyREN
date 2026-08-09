@@ -3,9 +3,14 @@ Export a labelled training set (CSV) from the events in the database, for the
 XGBoost triage classifier (scripts/train_triage.py).
 
 Labelling is by SOURCE IP:
-    attack IPs  (.104/.150/.151) -> label 1  (true positive)
-    benign IP   (.160)           -> label 0  (benign / false positive)
-    any other source             -> skipped (not labelled)
+    attack IPs  (.104/.105/.120/.122/.124/.150/.151/.152/.161) -> label 1 (TP)
+    benign IPs  (.160 + .162-.165)                             -> label 0 (FP)
+    any other source                                          -> skipped
+
+To grow the benign class, run lab/benign_traffic.sh from SEVERAL distinct
+BENIGN_IP values (see the README note): CyREN aggregates by (source_ip, rule),
+so re-running from the SAME IP only fattens the existing events -- each NEW
+benign source IP is what adds new benign rows.
 
 Contaminated benign samples are dropped: the benign host's SSH Brute Force and
 Port Scan events are NOT benign (its SSH used wrong credentials -> "Failed
@@ -72,8 +77,13 @@ def _behaviour(e):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--attack-ips", default="192.168.56.104,192.168.56.150,192.168.56.151")
-    ap.add_argument("--benign-ips", default="192.168.56.160")
+    ap.add_argument("--attack-ips",
+                    default="192.168.56.104,192.168.56.105,192.168.56.120,"
+                            "192.168.56.122,192.168.56.124,192.168.56.150,"
+                            "192.168.56.151,192.168.56.152,192.168.56.161")
+    ap.add_argument("--benign-ips",
+                    default="192.168.56.160,192.168.56.162,192.168.56.163,"
+                            "192.168.56.164,192.168.56.165")
     ap.add_argument("--out", default="data/training_set.csv")
     ap.add_argument("--manifest", default="data/training_set_manifest.csv")
     args = ap.parse_args()
