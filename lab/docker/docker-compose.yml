@@ -1,0 +1,72 @@
+# CyREN distributed attackers - 4 containers, each an independent source IP on the
+# Host-Only segment via the external ipvlan L2 network `hostonly_attackers`
+# (create it first, see DISTRIBUTED_ATTACK_GUIDE.md step 2).
+#
+# Convenience path:  docker compose up -d          (all at once; rate limits keep it gentle)
+# Staggered path:    ./run_distributed.sh up       (start one at a time with a GAP)
+# Stop/clean:        docker compose down           (or ./run_distributed.sh stop)
+
+services:
+  atk-sqlmap:                     # SQL injection from 192.168.56.120
+    image: cyren-attacker
+    container_name: atk-sqlmap
+    environment:
+      ATTACK: sqli                # -> sqlmap against /vulnerabilities/sqli (needs DVWA login, handled in entrypoint)
+      TARGET: 192.168.56.101      # DVWA target
+      START_DELAY: "0"            # 0 = start immediately (staggering done by run_distributed.sh)
+    networks:
+      hostonly:
+        ipv4_address: 192.168.56.120
+    cpus: 0.5                     # cap CPU (gentle, not a stress test)
+    mem_limit: 256m               # cap RAM
+    restart: "no"                 # one-shot: the container exits when the scan finishes
+
+  atk-hydra:                      # SSH brute force from 192.168.56.122
+    image: cyren-attacker
+    container_name: atk-hydra
+    environment:
+      ATTACK: hydra               # -> hydra ssh://target, -t 2 (gentle); trips the ≥5 Failed-password rule
+      TARGET: 192.168.56.101
+      START_DELAY: "0"
+    networks:
+      hostonly:
+        ipv4_address: 192.168.56.122
+    cpus: 0.5
+    mem_limit: 256m
+    restart: "no"
+
+  atk-nmap:                       # TCP connect port scan from 192.168.56.123
+    image: cyren-attacker
+    container_name: atk-nmap
+    environment:
+      ATTACK: nmap                # -> nmap -sT, --max-rate 200 (capped, trips PORTSCAN)
+      TARGET: 192.168.56.101
+      START_DELAY: "0"
+    networks:
+      hostonly:
+        ipv4_address: 192.168.56.123
+    cpus: 0.5
+    mem_limit: 256m
+    restart: "no"
+
+  atk-masscan:                    # high-rate SYN scan from 192.168.56.124
+    image: cyren-attacker
+    container_name: atk-masscan
+    environment:
+      ATTACK: masscan             # -> masscan --rate 300, resolves target MAC for --router-mac
+      TARGET: 192.168.56.101
+      START_DELAY: "0"
+    networks:
+      hostonly:
+        ipv4_address: 192.168.56.124
+    cap_add:                      # masscan crafts raw packets -> needs these caps
+      - NET_ADMIN
+      - NET_RAW
+    cpus: 0.5
+    mem_limit: 256m
+    restart: "no"
+
+networks:
+  hostonly:
+    external: true                # created manually with `docker network create -d ipvlan ...`
+    name: hostonly_attackers      # must match the network name from step 2

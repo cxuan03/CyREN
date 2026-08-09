@@ -1,0 +1,11 @@
+123456
+password
+admin
+root
+toor
+letmein
+qwerty
+dvwa
+password123
+P@ssw0rd
+changeme
