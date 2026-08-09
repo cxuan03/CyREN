@@ -1087,3 +1087,30 @@ benign_traffic(不同 BENIGN_IP)补的负样本。现训练集 **22 attack / 24 
 - 冒烟:不带 manifest = 旧行为(22/24);带 --label-manifest 正确 +N/+N 并 union;
   故意制造的 attack∩benign 冲突 IP(.104)被正确跳过并告警。
 - CSV 表头无 source_ip;导出 46 行、0 unlabelled。
+
+---
+
+## 2026-07-21 — 修 collect_dataset.sh 卡死(curl 无超时 + 无 preflight)
+
+### 根因
+
+第一个 session 打完头部就无限挂起:`web_attack` 的第一句日志在 `dvwa_login` 之后,
+而 dvwa_login 的 curl **没有任何超时**。当别名 `.170` 从 `$IFACE` 发不出去时(最可能是
+**IFACE 不是 Host-Only 网卡** 或别名路由不通),curl 一直等 → 永远到不了后面的日志,
+manifest 也只有表头。
+
+### 修复
+
+1. **所有 curl 加超时**(`--connect-timeout 5 --max-time 25`,共 12 处):路由不通也
+   只会快速失败、记 login-failed 继续,绝不无限挂。
+2. **新增 preflight**:跑 session 前用一个临时别名以带超时方式访问一次 DVWA;不通就
+   **~5 秒内报错并给出排查指引**(检查 IFACE 是否 Host-Only 网卡 / DVWA 是否在),
+   而不是卡死。
+3. **逐步日志**:每 session 打印 "session N: <type> from <ip>" → "logging in" →
+   "login ok; sending N requests" → 进度 → "done",卡哪步一目了然。
+4. hydra/nmap 加 `timeout`(90s/120s);simplify pause。
+
+### 验证
+
+- `bash -n` 通过;静态检查 preflight/超时/timeout 均在。端到端需在 Kali 跑
+  (本机无 `ip`/靶场)。先小批 `--attack 1 --benign 1` 验证。
