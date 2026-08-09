@@ -84,16 +84,24 @@ docker network rm hostonly_attackers    # remove the test network when done
 
 ---
 
-## Stage 1 — scale to four attackers (only after Stage 0 passes)
+## Stage 1 — 4 distributed attackers (BUILT + VERIFIED)
 
-Planned next (not built yet): a `cyren-attacker` image (Debian-slim + sqlmap /
-hydra / nmap / masscan / curl), a `docker-compose.yml` pinning four containers to
-fixed IPs on `hostonly_attackers`, and `run_distributed.sh` to start them
-staggered with per-tool rate limits (no DDoS):
+Implemented in this directory (full manual: `DISTRIBUTED_ATTACK_GUIDE.md`): a
+`cyren-attacker` image (Debian-slim + sqlmap/hydra/nmap/masscan/medusa/curl),
+`docker-compose.yml` pinning four containers to fixed IPs on
+`hostonly_attackers`, and `run_distributed.sh` to start them staggered with
+per-tool rate limits (no DDoS):
 
 | Container | IP | Tool | Attack |
 |-----------|-----|------|--------|
 | atk-sqlmap  | 192.168.56.120 | sqlmap | SQLi |
-| atk-hydra   | 192.168.56.121 | hydra  | SSH brute |
-| atk-nmap    | 192.168.56.122 | nmap   | Port scan |
-| atk-masscan | 192.168.56.123 | masscan | Port scan (high-rate) |
+| atk-hydra   | 192.168.56.122 | hydra  | SSH brute |
+| atk-nmap    | 192.168.56.123 | nmap   | Port scan |
+| atk-masscan | 192.168.56.124 | masscan | Port scan (high-rate) |
+
+**Verified (lab):** containers .120 (SQL Injection), .122 (SSH Brute Force) and
+.124 (Port Scanning) reached CyREN as independent-source events over ipvlan L2
+(no NAT). nmap .123 was not among the confirmed sources in that run — its gentle
+`--max-rate 200` may not have tripped the 20-SYN/10s PORTSCAN threshold; masscan
+.124 already covers the port-scan source. Re-run and grep `kern.log` for
+`SRC=192.168.56.123` if you want the nmap source too.

@@ -833,8 +833,14 @@ sudo grep 'cyren_probe=ipvlan_192.168.56.120' /var/log/apache2/access.log | tail
 
 ### 8.6 验证结果 / 状态
 
-- `bash -n lab/docker/verify_ipvlan.sh` 语法通过；连通性验证脚本就绪。
-- **状态**：待在 Kali 实跑第 8.4 三步（看 Apache 日志 client 是否为 .120）决定铺开或退回。
+- 连通性验证通过：单容器 .120 以独立 IP 打到 Target，Apache 日志 client 为 .120（无 NAT）。
+- **4 容器分布式实验室验证成功（Part A 完成）**：容器 **.120（SQL Injection）、
+  .122（SSH Brute Force）、.124（Port Scanning）** 作为**独立源**进入 CyREN，
+  证明 ipvlan L2 多源无 NAT 成立。
+- nmap **.123** 本轮**未**出现在已确认源里——其温和的 `--max-rate 200` 可能没触发
+  「10 秒内 20 个 SYN」的 PORTSCAN 阈值;端口扫描源已由 masscan .124 覆盖。要补 .123
+  的话重跑并在靶机 `kern.log` 查 `SRC=192.168.56.123`。
+- `bash -n lab/docker/*.sh` 语法通过；`docker-compose.yml` 经 YAML 校验。
 
 ---
 

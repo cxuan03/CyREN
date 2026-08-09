@@ -957,3 +957,37 @@ verify_ipvlan.sh 连通性）：
 - `bash -n` attack.sh / run_distributed.sh 语法通过。
 - `docker-compose.yml` 经 YAML 解析器验证，4 服务网络结构一致正确。
 - 端到端 build/run 由用户在 Kali 手动执行（本机不跑 docker）。
+
+---
+
+## 2026-07-21 — Part A 完成：4 容器真分布式攻击实验室验证成功
+
+### 做了什么
+
+在 Kali 上 build/run 了 `lab/docker/` 的 4 容器分布式攻击(ipvlan L2),实验室验证：
+**容器 .120(sqlmap→SQL Injection)、.122(hydra→SSH Brute Force)、
+.124(masscan→Port Scanning)作为独立源进入 CyREN**——证明 ipvlan L2 多源、无 NAT
+成立(Target 日志 client IP 即容器 IP)。至此 **Part A(真实攻击多样性)完成**：
+多工具(sqlmap/手写curl/hydra/medusa/nmap/masscan)、多源(别名 6 IP + 容器独立 IP)、
+真分布式容器三条线都打通。
+
+同步更新文档状态:`lab/docker/README.md` 的 Stage 1 从"未建"改为"BUILT + VERIFIED"
+并修正 IP 表(.120/.122/.123/.124);`docs/PROJECT_FULL_RECORD.md` §8.6 改为"已验证";
+重新生成 PDF(21 页 A4,仍为 `<ELK_PASSWORD>` 占位、无密钥)。
+
+### 如实记录的一点
+
+nmap **.123** 本轮**未**出现在已确认源里(用户只报告了 .120/.122/.124)。推测其温和的
+`--max-rate 200` 没触发靶机「10 秒 20 个 SYN」的 PORTSCAN 阈值;端口扫描源已由
+masscan .124 覆盖。要补 .123 可重跑并在 `kern.log` 查 `SRC=192.168.56.123`
+(或调高 nmap 速率)。
+
+### 验证结果
+
+- 4 容器独立源:.120/.122/.124 三源在 CyREN 为独立事件(SQLi/SSH Brute/Port Scan)。
+- `bash -n lab/docker/*.sh` 通过;`docker-compose.yml` YAML 校验通过;PDF 21 页 A4。
+
+### 下一步
+
+Part A 收官。可进入 **Part B**:Investigation 升级为三档 agent
+(baseline / react-lite / react-full,behind INVESTIGATION_MODE),见 upgrade_plan.md。
