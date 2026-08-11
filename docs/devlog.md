@@ -1150,3 +1150,23 @@ manifest 也只有表头。
 4. XGBoost==RF,XGBoost 因增量学习/训练效率/工业采用度被选。
 5. 22/4 → 103 行(65/38),方差 ±0.17 → ≤±0.05,结论稳定。
 保留诚实 caveat。只改 markdown,代码输出/5 图不动(0 error)。
+
+---
+
+## 2026-07-21 — Objective 4 系统评估(第一步:能算的两个指标)
+
+### 做了什么
+
+新增 `notebooks/objective4_system_evaluation.ipynb`,算出当前数据支持的两个指标:
+1. **自动化率**:从 Event.risk 统计,(high 62 自动封禁 + low 55 自动记录)/ 159 = **73.6%**;
+   uncertain 42 = 26.4% 需人工。BlockedIP.blocked_by 全 auto,佐证高危无人工。饼图 + 柱状图。
+2. **误报识别率**:用部署模型 XGBoost 在 grey-zone 标注集上做 5 折 cross_val_predict,
+   取 benign(=假阳性)类的 recall = **100.0%**(precision 也 100%)。混淆矩阵 + 四分类器
+   benign-recall 对比柱状图。source_ip 不进特征(assert),confidence/risk 排除。
+
+MTTR/MTTD 标注为"待第二步"(加 ingested_at + 实时重跑;ES 告警索引查询)。
+
+### 验证结果
+
+- notebook `nbconvert --execute` 端到端跑通:0 error、2 图;自动化率 73.6%、误报识别率 100%。
+- 数字与 DB 现状一致(159 事件:high 62/uncertain 42/low 55)。
