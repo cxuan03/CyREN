@@ -63,6 +63,7 @@ def persist_pipeline_result(state: dict) -> Event:
             source_ip=state.get("source_ip"),
             rule=state.get("rule"),
             first_seen=_parse_ts(state.get("first_seen"), now),
+            ingested_at=now,   # CyREN's own clock; set ONCE, never overwritten on merge
         )
         db.session.add(event)
 

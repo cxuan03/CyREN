@@ -77,8 +77,13 @@ class Event(db.Model):
     vuln_info = db.Column(db.JSON)                   # {exploitable, matching_cves, ...}
 
     chain_id = db.Column(db.Integer, db.ForeignKey("attack_chains.id"))
-    first_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    first_seen = db.Column(db.DateTime, default=datetime.utcnow)   # oldest RAW alert/log time
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)    # newest RAW alert/log time
+    # When CyREN first ingested/processed this event (its own clock). Distinct
+    # from first_seen/last_seen (which are the raw alert times) and, unlike
+    # last_seen, never overwritten on re-ingest. Used for end-to-end MTTR:
+    # response time (BlockedIP.created_at) - last_seen.
+    ingested_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     def to_dict(self):
         return {
@@ -95,6 +100,7 @@ class Event(db.Model):
             "chain_id": self.chain_id,
             "first_seen": self.first_seen.isoformat() if self.first_seen else None,
             "last_seen": self.last_seen.isoformat() if self.last_seen else None,
+            "ingested_at": self.ingested_at.isoformat() if self.ingested_at else None,
         }
 
 

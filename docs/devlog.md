@@ -1170,3 +1170,23 @@ MTTR/MTTD 标注为"待第二步"(加 ingested_at + 实时重跑;ES 告警索引
 
 - notebook `nbconvert --execute` 端到端跑通:0 error、2 图;自动化率 73.6%、误报识别率 100%。
 - 数字与 DB 现状一致(159 事件:high 62/uncertain 42/low 55)。
+
+---
+
+## 2026-07-21 — Objective 4 第二步 A:Event 加 ingested_at(为端到端 MTTR)
+
+### 做了什么
+
+- `app/models/db.py`:Event 加 `ingested_at`(DateTime,default utcnow,index),
+  to_dict 输出。注释说明它是 CyREN 自己时钟的处理时刻,不像 last_seen 会被重摄取覆盖。
+- `app/services/event_service.py`:persist 时**仅新建事件写 `ingested_at=now`**,
+  合并已有事件不覆盖(保留首次处理时刻)。
+- SQLite 现有库 `ALTER TABLE events ADD COLUMN ingested_at DATETIME`(幂等,已执行)。
+- 端到端 MTTR 定义(同步流水线下才有意义):`BlockedIP.created_at − Event.last_seen`。
+  ingested_at 用于稳定拆解 检测+排队延迟(ingested_at−last_seen)与响应延迟(≈0)。
+
+### 验证结果
+
+- `pytest` 改动前 5 passed、改动后 5 passed,baseline 未坏。
+- 列存在确认;ORM 查询/ to_dict 正常(无 "no such column")。
+- 旧的 159 个 backfill 事件 ingested_at=NULL(将来算 MTTR 只取 ingested_at 非空的实时事件)。
