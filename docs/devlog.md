@@ -1190,3 +1190,29 @@ MTTR/MTTD 标注为"待第二步"(加 ingested_at + 实时重跑;ES 告警索引
 - `pytest` 改动前 5 passed、改动后 5 passed,baseline 未坏。
 - 列存在确认;ORM 查询/ to_dict 正常(无 "no such column")。
 - 旧的 159 个 backfill 事件 ingested_at=NULL(将来算 MTTR 只取 ingested_at 非空的实时事件)。
+
+---
+
+## 2026-07-21 — Objective 4 第二步 A/B:MTTR + MTTD 实测
+
+### 做了什么
+
+1. **MTTR**(Objective 4 notebook §3):实时采集(新 IP .210-.214/.230-.231,17:22-17:25
+   被实时检测封禁,ingested_at 有值)。只取 `ingested_at IS NOT NULL` 的实时事件、被封禁的。
+   **实测:mean 27.7s / median 25.8s / p95 37.7s**(6 事件)。直方图 + 明细表。
+2. **MTTD**(`scripts/measure_mttd.py` + notebook §4):查 ES 告警索引
+   `MTTD = kibana.alert.@timestamp − kibana.alert.original_time`,按规则聚合。
+   **实测(median):SSH 16s / CmdInj 28s / XSS 28s / FI 30s / PortScan 53s / SQLi 235s;总体 51s**。
+   SQLi 高是因为其规则 interval=5m(其它 30s)——真实配置发现。
+
+### 关键修正(诚实)
+
+原定 `MTTR = block − last_seen` 实测出**负值**——因为 `last_seen` 是最新日志时间,会随
+攻击持续后移,攻击者比封禁"活得久"时 block 就早于 last_seen。改用
+**`first_seen`(首次恶意活动=告警起点)**:`MTTR = block − first_seen`,全为正、稳定。
+
+### 验证结果
+
+- notebook 0 error、4 图(自动化/FP/MTTR/MTTD),四指标齐全。
+- `measure_mttd.py` 跑通(10000 样本;支持 --hours/--index/--size)。
+- MTTD cell 带 try/except:ES 不可达时优雅降级,提示跑脚本。
