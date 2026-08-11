@@ -1216,3 +1216,22 @@ MTTR/MTTD 标注为"待第二步"(加 ingested_at + 实时重跑;ES 告警索引
 - notebook 0 error、4 图(自动化/FP/MTTR/MTTD),四指标齐全。
 - `measure_mttd.py` 跑通(10000 样本;支持 --hours/--index/--size)。
 - MTTD cell 带 try/except:ES 不可达时优雅降级,提示跑脚本。
+
+---
+
+## 2026-07-21 — Objective 3/4 notebook 导出 HTML(报告附录用)
+
+### 做了什么
+
+- 导出 `notebooks/objective3_classifier_comparison.html` 和
+  `notebooks/objective4_system_evaluation.html`(nbconvert,自包含、图片内嵌),
+  方便直接截图/附录。
+- 目视核验 Objective 4 四个图均有清晰标题 + 坐标轴标签,可截图:
+  ①自动化(饼+柱,含 % 与数值)②FP 混淆矩阵(轴标签 + 38/0/0/65)
+  ③MTTR 直方图(x/y 轴 + mean/median 线)④MTTD 柱状图(x/y 轴 + 每柱数值 + 规则名)。
+- 修 §5 汇总里硬编码的 "73.6%" → "~73%"(实时 MTTR 那批攻击又加了事件,库现 179,
+  §1 实算 73.2%;用近似值避免与代码单元漂移不一致)。
+
+### 验证结果
+
+- nb4 重新执行 0 error、4 图;两个 HTML 生成成功(~600KB/~570KB)。
