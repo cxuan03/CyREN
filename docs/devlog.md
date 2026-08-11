@@ -1114,3 +1114,26 @@ manifest 也只有表头。
 
 - `bash -n` 通过;静态检查 preflight/超时/timeout 均在。端到端需在 Kali 跑
   (本机无 `ip`/靶场)。先小批 `--attack 1 --benign 1` 验证。
+
+---
+
+## 2026-07-21 — Objective 3 最终结论(grey-zone 数据 + 结论 cell)
+
+### 做了什么
+
+用户在主机上用 grey-zone 数据重跑了 notebook(库现含 .170–.199 攻击、.200–.209 良性,
+训练集 103 行 = 65 attack / 38 benign)。5 折 CV 结果:
+**XGBoost 1.000±0.000、RandomForest 1.000±0.000、LogisticRegression 0.896、SVM 0.888**,
+`has_keyword` 是 XGBoost 最重要特征。
+
+把最终结论写进 notebook §14(只改 markdown,保留已有输出/图):
+- grey-zone 打破 request_count 捷径后,树模型(XGBoost/RF)显著优于线性模型(LR/SVM),
+  验证选 XGBoost 做分诊器的合理性;
+- XGBoost 与 RF 性能相同(均 1.000),但 XGBoost 因**增量/继续学习**(契合持续学习需求)、
+  **训练效率**、**工业采用度**被选为分诊器;
+- 附诚实 caveat:1.000 是受控实验室里 has_keyword 近乎干净可分的结果,生产环境会更低;
+  可迁移的贡献是方法学(grey-zone 破捷径 + k 折 CV + source_ip/confidence 零泄漏)。
+
+### 验证结果
+
+- notebook 0 error、5 图保留;§14 结论已更新且与嵌入的 1.000 输出一致。

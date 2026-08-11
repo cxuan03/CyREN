@@ -17,3 +17,6 @@ data/training_set_manifest.csv
 # collect_dataset.sh runtime manifest
 dataset_manifest.csv
 lab/dataset_manifest.csv
+
+# jupyter
+.ipynb_checkpoints/
