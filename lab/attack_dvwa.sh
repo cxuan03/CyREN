@@ -18,6 +18,7 @@
 #   ./attack_dvwa.sh                 # attack the default target, all phases
 #   TARGET=192.168.56.101 ./attack_dvwa.sh
 #   ./attack_dvwa.sh --only ssh      # run one attack (sqli|xss|cmd|fi|ssh|scan)
+#   ./attack_dvwa.sh --src 192.168.56.200 --only sqli   # one attack from a chosen source IP
 #   ./attack_dvwa.sh --yes           # skip the confirmation prompt
 #
 set -uo pipefail
@@ -30,9 +31,14 @@ DVWA_PASS="${DVWA_PASS:-password}"
 
 # attacker source IPs (aliases added to $IFACE). Six attacks are spread
 # across the three so CyREN sees multiple sources and can correlate chains.
-IP_A="192.168.56.104"     # SQL injection + file inclusion
-IP_B="192.168.56.150"     # XSS + command injection
-IP_C="192.168.56.151"     # SSH brute force + port scan
+# Each is overridable via env, e.g. IP_A=192.168.56.200 ./attack_dvwa.sh
+IP_A="${IP_A:-192.168.56.104}"     # SQL injection + file inclusion
+IP_B="${IP_B:-192.168.56.150}"     # XSS + command injection
+IP_C="${IP_C:-192.168.56.151}"     # SSH brute force + port scan
+# SRC (env or --src) overrides the source IP for EVERY attack in this run - use
+# it together with --only to fire one chosen attack from one chosen source IP.
+# Empty = use the per-attack IPs above.
+SRC="${SRC:-}"
 ALIASES=("$IP_A" "$IP_B" "$IP_C")
 
 COOKIE_JAR="$(mktemp)"
@@ -50,11 +56,21 @@ phase()  { printf '\n\033[1;36m===== %s =====\033[0m\n' "$*"; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --only) ONLY="$2"; shift 2 ;;
+    --src)  SRC="$2"; shift 2 ;;
     --yes)  ASSUME_YES=1; shift ;;
     -h|--help) grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) c_err "unknown argument: $1"; exit 2 ;;
   esac
 done
+
+# a chosen source IP applies to every phase; alias only that one address
+if [ -n "$SRC" ]; then
+  case "$SRC" in
+    10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*) : ;;
+    *) c_err "SRC $SRC is not a private lab address. Refusing."; exit 1 ;;
+  esac
+  ALIASES=("$SRC")
+fi
 
 # ------------------------------------------------------------ safety checks
 case "$TARGET" in
@@ -214,7 +230,7 @@ attack_scan() {
 setup_aliases
 
 run_phase() { # $1 = source ip, rest = attack functions
-  local src="$1"; shift
+  local src="${SRC:-$1}"; shift
   use_source "$src"
   for fn in "$@"; do
     if [ -z "$ONLY" ] || [ "$ONLY" = "${fn#attack_}" ]; then
