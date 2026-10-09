@@ -60,7 +60,7 @@ def _wrap(text, max_w, font="Helvetica", size=11):
 # content of the report changes: callers compare it against the stored
 # file_path and regenerate anything produced by an older version, so reports
 # on disk never lag behind the current design.
-REPORT_FORMAT_VERSION = "v35"  # v35: no "Showing the first N of M" caption above the raw log box; v34: unknown target shown as Unknown + resolved IP; v33: asset description column; v32: asset names by site; v31: comments as a table; v30: analyst comment thread with images; v29: dated analyst summaries; v28: discussion, notes, target asset in Alert Details; v27: no log-count caption; v26: 12-hour clock, first/last seen split; v25: user-chosen section order; v24: activity order, audit labels in words; v23: wide tables may shrink to 8 pt; v22: date/time split, local time, no stranded headings; v21: ticket description as a row; v20: self-sizing columns, no count captions; v19: response rows split; v18: ticket rows split, no caption; v17: response table in plain words; v16: no reputation row; v15: no response caption, whitelisted wording, log dividers; v14: reputation in words; v13: measured wrapping, chain order; v12: chain as one block, terminal log box; v11: header dividers; v10: AI Analysis as a table; v9: boxed confidence block; v8: no card frame, darker grid; v7: square bar corners; v6: bar flush on its content; v5: larger type; v4: logo header; v3: Case Ticket
+REPORT_FORMAT_VERSION = "v36"  # v36: event detail title is the Alert Details bar (no stranded heading bar); v35: no "Showing the first N of M" caption above the raw log box; v34: unknown target shown as Unknown + resolved IP; v33: asset description column; v32: asset names by site; v31: comments as a table; v30: analyst comment thread with images; v29: dated analyst summaries; v28: discussion, notes, target asset in Alert Details; v27: no log-count caption; v26: 12-hour clock, first/last seen split; v25: user-chosen section order; v24: activity order, audit labels in words; v23: wide tables may shrink to 8 pt; v22: date/time split, local time, no stranded headings; v21: ticket description as a row; v20: self-sizing columns, no count captions; v19: response rows split; v18: ticket rows split, no caption; v17: response table in plain words; v16: no reputation row; v15: no response caption, whitelisted wording, log dividers; v14: reputation in words; v13: measured wrapping, chain order; v12: chain as one block, terminal log box; v11: header dividers; v10: AI Analysis as a table; v9: boxed confidence block; v8: no card frame, darker grid; v7: square bar corners; v6: bar flush on its content; v5: larger type; v4: logo header; v3: Case Ticket
 
 PAGE_W, PAGE_H = 595, 842          # A4 in points
 MARGIN = 45
@@ -665,9 +665,12 @@ class _Doc:
 
 
 # ------------------------------------------------------------------ content
-def _render_event_sections(d, state):
+def _render_event_sections(d, state, title=None):
     """Draw one event's full detail sections onto an existing _Doc. Shared by
-    the single-event report and the per-event pages of the chain report."""
+    the single-event report and the per-event pages of the chain report.
+    `title` replaces the first bar's "Alert Details" label so a detail page
+    gets ONE bar on its table (like ticket and chain pages), not a stranded
+    heading bar followed by a second bar."""
     # 1. Alert details -----------------------------------------------------
     alert_rows = [
         ("Event ID", f"#{state['event_id']}" if state.get("event_id") else "pending"),
@@ -683,7 +686,7 @@ def _render_event_sections(d, state):
         ("Last Seen", _local_dt(state.get("last_seen"))[0] or "—"),
         ("Last Seen at", _local_dt(state.get("last_seen"))[1] or "—"),
     ]
-    d.section("Alert Details", keep=d.kv_height(alert_rows))
+    d.section(title or "Alert Details", keep=d.kv_height(alert_rows))
     d.kv_table(alert_rows)
 
     # 2. Classification ----------------------------------------------------
@@ -915,9 +918,8 @@ def _render_chain(c, state, total_pages=None):
     details = state.get("event_details") or []
     for est in details:
         d._new_page()
-        d.section("Event #%s Detail — %s" % (est.get("event_id") or "?",
-                                             est.get("attack_type") or "Event"))
-        _render_event_sections(d, est)
+        _render_event_sections(d, est, title="Event #%s Detail — %s" % (
+            est.get("event_id") or "?", est.get("attack_type") or "Event"))
     d._close_section()
 
 
@@ -1042,9 +1044,8 @@ def _render_activity(c, state, total_pages=None):
     def s_events():
         for est in secs.get("event_details") or []:
             d._new_page()
-            d.section("Event #%s Detail — %s" % (est.get("event_id") or "?",
-                                                 est.get("attack_type") or "Event"))
-            _render_event_sections(d, est)
+            _render_event_sections(d, est, title="Event #%s Detail — %s" % (
+                est.get("event_id") or "?", est.get("attack_type") or "Event"))
         if "events" in secs and not secs.get("event_details"):
             rows = secs["events"]
             d.section("Security Events", keep=27 + max(len(rows), 1) * 30 + 8)
