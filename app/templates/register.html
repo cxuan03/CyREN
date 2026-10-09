@@ -4,68 +4,128 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CyREN &mdash; Register</title>
+<link rel="icon" type="image/png" href="/static/img/cyren-mark.png">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family:'Space Grotesk',sans-serif; background:#fff8e7; color:#1a1a1a; font-weight:500; }
-  .auth-wrap {
-    min-height:100vh; display:flex; align-items:center; padding:40px 20px;
-    background-image:radial-gradient(#e9ddb6 1.6px, transparent 1.6px);
-    background-size:17px 17px;
+  :root{
+    color-scheme:dark;
+    --bg:#e9edf3; --panel:#243347; --border:#3a4d67;
+    --text:#eef4fa; --text-2:#bccddf; --muted:#8a9db2;
+    --link:#5bd3e8; --accent:#22d3ee; --accent-2:#67e8f9;
+    --accent-soft:rgba(34,211,238,.12);
   }
-  .card { border:4px solid #1a1a1a !important; border-radius:10px; box-shadow:6px 6px 0 #1a1a1a; background:#fff; }
-  .btn { border:3px solid #1a1a1a !important; border-radius:8px; font-weight:700;
-         box-shadow:3px 3px 0 #1a1a1a; font-family:'Space Grotesk',sans-serif; }
-  .btn:active { transform:translate(3px,3px); box-shadow:none; }
-  .btn-primary { background:#0d2c50 !important; color:#ffd60a !important; }
-  .btn-outline-secondary { background:#fff; color:#1a1a1a; }
-  .form-control,.form-select,.input-group-text { border:3px solid #1a1a1a; border-radius:8px;
-    font-weight:500; font-family:'Space Grotesk',sans-serif; }
-  .form-control:focus,.form-select:focus { border-color:#1a1a1a; box-shadow:3px 3px 0 #ffd60a; }
-  .alert { border:3px solid #1a1a1a; border-radius:8px; box-shadow:3px 3px 0 #1a1a1a; font-weight:600; }
-  .alert-danger { background:#ffc9c9; color:#8a1c1c; }
-  h3 { font-family:'Archivo Black',sans-serif; }
-  .brand-title { font-family:'Archivo Black',sans-serif; color:#0d2c50; letter-spacing:1px; }
-  .brand-sub { color:#8a8070; font-weight:600; font-size:.8rem; }
-  .pw-hint { font-size:.75rem; color:#9aa0a6; margin-top:4px; }
+  body{ font-family:'IBM Plex Sans','Segoe UI',system-ui,sans-serif; background:var(--bg);
+        color:var(--text); font-weight:400; }
+  ::selection{ background:rgba(34,211,238,.28); }
+  .auth-wrap{
+    min-height:100vh; display:flex; align-items:center; padding:40px 20px;
+    background-image:
+      linear-gradient(rgba(23,42,72,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(23,42,72,.05) 1px, transparent 1px);
+    background-size:44px 44px;
+  }
+  .card{ border:1px solid var(--border); border-radius:12px;
+         box-shadow:0 16px 44px rgba(0,0,0,.4); background:var(--panel); }
+  .btn{ border-radius:7px; font-weight:600; border:1px solid transparent; }
+  .btn-primary{ background:var(--accent); border-color:var(--accent); color:#04222b; }
+  .btn-primary:hover{ background:#4ce0f7; border-color:#4ce0f7; color:#04222b; }
+  .btn-outline-secondary{ background:transparent; color:var(--text-2); border-color:var(--border); }
+  .btn-outline-secondary:hover{ background:rgba(148,190,230,.06); color:var(--text);
+                                border-color:#2c3d52; }
+  /* password show/hide eye: white button, dark icon, same as the console dialogs */
+  .input-group .btn-outline-secondary{ background:#ffffff; color:#12233a; border:1.5px solid #90a2b8; border-left:0; }
+  .input-group .btn-outline-secondary:hover{ background:#d6e4f2; color:#12233a; border-color:#90a2b8; }
+  .form-control,.form-select{ background:#ffffff; border:1.5px solid #90a2b8; color:#12233a;
+                              border-radius:7px; font-size:.9rem; color-scheme:light; }
+  .form-control::placeholder{ color:#6b7f96; }
+  .form-control:focus,.form-select:focus{ background:#ffffff; color:#12233a;
+    border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .input-group-text{ background:#eef2f7; border:1.5px solid #90a2b8; color:#3d5470;
+                     border-radius:7px; }
+  .form-label{ color:var(--text-2); font-size:.8rem; font-weight:600; }
+  .alert{ border-radius:8px; font-weight:500; font-size:.85rem; border:1px solid; }
+  .alert-danger{ background:rgba(244,86,78,.13); color:#ff8f88; border-color:rgba(244,86,78,.35); }
+  h3{ font-weight:600; }
+  a{ color:var(--link); }
+  .text-muted{ color:var(--muted) !important; }
+  .brand-mark{
+    width:46px; height:46px; border-radius:12px; background:var(--accent-soft);
+    color:var(--accent); display:inline-flex; align-items:center; justify-content:center;
+    font-size:1.4rem; border:1px solid rgba(34,211,238,.35);
+    box-shadow:0 0 18px rgba(34,211,238,.22); margin-bottom:.6rem;
+  }
+  .brand-title{ font-family:'Chakra Petch',sans-serif; color:#17202b; letter-spacing:2px;
+                font-weight:700; font-size:1.55rem; text-transform:uppercase; }
+  .brand-sub{ color:#5a6a7d; font-weight:500; font-size:.66rem;
+              text-transform:uppercase; letter-spacing:1.8px; }
+  .pw-hint{ font-size:.75rem; color:var(--muted); margin-top:4px; }
+  /* stacked hero logo (same as the sign-in page): floating cat + CYREN wordmark
+     with a few pixel "sparks" crackling near the cat */
+  .cyren-cat-wrap{ position:relative; display:inline-block; }
+  .cyren-cat{ width:112px; height:auto; display:block;
+              animation:catFloat 3.6s ease-in-out infinite;
+              filter:drop-shadow(0 6px 14px rgba(0,0,0,.18)); transition:transform .25s ease; }
+  .cyren-cat-wrap:hover .cyren-cat{ transform:scale(1.06) rotate(-2deg); }
+  @keyframes catFloat{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-7px) } }
+  .cyren-word{ max-width:240px; width:74%; height:auto; display:block; margin:8px auto 0; }
+  .spark{ position:absolute; width:7px; height:7px; border-radius:2px;
+          background:var(--accent); box-shadow:0 0 9px var(--accent); opacity:0; }
+  .spark.s1{ top:8px;  right:2px;   animation:spark 1.5s infinite 0s; }
+  .spark.s2{ top:22px; right:-9px;  animation:spark 1.5s infinite .35s; }
+  .spark.s3{ top:-3px; right:-15px; width:5px; height:5px; animation:spark 1.5s infinite .7s; }
+  @keyframes spark{ 0%{ opacity:0; transform:scale(.4) } 14%{ opacity:1; transform:scale(1.2) }
+                    38%{ opacity:.15 } 55%{ opacity:1; transform:scale(.8) }
+                    100%{ opacity:0; transform:scale(.4) } }
 </style>
 </head>
 <body>
 
 <div class="auth-wrap">
-  <div class="container" style="max-width:470px">
+  <div class="container" style="max-width:560px">
 
     <div class="text-center mb-4">
-      <h1 class="brand-title mb-0">CyREN</h1>
-      <div class="brand-sub">SOC INCIDENT RESPONSE</div>
+      <span class="cyren-cat-wrap">
+        <img src="/static/img/cyren-mark.png" alt="" class="cyren-cat">
+        <span class="spark s1"></span><span class="spark s2"></span><span class="spark s3"></span>
+      </span>
+      <img src="/static/img/cyren-text.png" alt="CyREN" class="cyren-word">
     </div>
 
     <div class="card">
-      <div class="card-body p-4">
+      <div class="card-body p-5">
 
-        <h3 class="text-center mb-4" style="color:#0d2c50;text-transform:uppercase;letter-spacing:1px">Register</h3>
+        <div id="regForm">
+        <h3 class="text-center mb-4" style="font-size:1.2rem;color:var(--text);font-weight:600">{% if setup_needed %}Create your organization{% else %}Request an account{% endif %}</h3>
 
         <div id="regErr" class="alert alert-danger py-2" style="display:none"></div>
 
         <div class="mb-3">
-          <label class="form-label">Username</label>
+          <label class="form-label">Company / Organization <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-building"></i></span>
+            <input type="text" class="form-control" id="regCompany" placeholder="e.g. Acme Sdn Bhd"
+                   oninput="companyCheckDebounced()" onblur="companyCheck()">
+          </div>
+          <div id="companyTaken" class="alert alert-warning py-2 mt-2 mb-0" style="display:none;font-size:.8rem">
+            <i class="bi bi-exclamation-triangle"></i> <strong>This company is already registered.</strong>
+            Already have an account? <a href="/login">Sign in</a>. Submitting this form instead
+            requests a <em>new account</em> in it, which needs a manager's approval.
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Username <span class="text-danger">*</span></label>
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
             <input type="text" class="form-control" id="regUser" autocomplete="username" placeholder="e.g. analyst02">
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Full Name</label>
-          <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-person-badge-fill"></i></span>
-            <input type="text" class="form-control" id="regName" placeholder="e.g. Chong Mei San">
-          </div>
-        </div>
 
         <div class="mb-3">
-          <label class="form-label">Work Email</label>
+          <label class="form-label">Work Email <span class="text-danger">*</span></label>
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-envelope-fill"></i></span>
             <input type="email" class="form-control" id="regEmail" placeholder="name@company.com">
@@ -73,18 +133,18 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Role</label>
-          <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-people-fill"></i></span>
-            <select class="form-select" id="regRole">
-              <option value="analyst">SOC Analyst</option>
-              <option value="manager">SOC Manager</option>
-            </select>
-          </div>
+          {% if setup_needed %}
+          <div class="pw-hint"><i class="bi bi-info-circle"></i> The first account becomes the
+            <strong>administrator</strong> with full permissions, able to create users and assign their permissions.</div>
+          {% else %}
+          <div class="pw-hint"><i class="bi bi-info-circle"></i> Enter your organisation's exact company name.
+            Your account will be created <strong>pending a manager's approval</strong> and has no access until
+            approved &mdash; you can sign in once a manager approves it and assigns your permissions.</div>
+          {% endif %}
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Password</label>
+          <label class="form-label">Password <span class="text-danger">*</span></label>
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
             <input type="password" class="form-control" id="regPw" autocomplete="new-password">
@@ -96,16 +156,19 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Confirm Password</label>
+          <label class="form-label">Confirm Password <span class="text-danger">*</span></label>
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
             <input type="password" class="form-control" id="regPw2" autocomplete="new-password"
                    onkeydown="if(event.key==='Enter')doRegister()">
+            <button class="btn btn-outline-secondary" type="button" onclick="togglePw('regPw2', this)">
+              <i class="bi bi-eye-fill"></i>
+            </button>
           </div>
         </div>
 
         <button class="btn btn-primary w-100 py-2" id="regBtn" onclick="doRegister()">
-          <i class="bi bi-person-plus-fill"></i> Create Account
+          <i class="bi bi-person-plus-fill"></i> {% if setup_needed %}Create organization &amp; admin{% else %}Request account{% endif %}
         </button>
 
         <hr class="my-4">
@@ -113,6 +176,17 @@
         <p class="text-center text-muted small mb-0">
           Already have an account? <a href="/login">Sign in</a>
         </p>
+        </div><!-- /regForm -->
+
+        <!-- shown after a self-registration request (pending approval) -->
+        <div id="regDone" style="display:none" class="text-center">
+          <div style="font-size:2.4rem;color:var(--accent)"><i class="bi bi-hourglass-split"></i></div>
+          <h3 class="mt-2 mb-3" style="font-size:1.2rem;color:var(--text);font-weight:600">Request received</h3>
+          <p id="regDoneMsg" class="text-muted small"></p>
+          <a href="/login" class="btn btn-primary w-100 py-2 mt-2">
+            <i class="bi bi-box-arrow-in-right"></i> Back to Sign In
+          </a>
+        </div>
       </div>
     </div>
 
@@ -120,6 +194,34 @@
 </div>
 
 <script>
+  /* company name carried over from a failed sign-in ("Organisation not found") */
+  (function () {
+    var c = new URLSearchParams(location.search).get('company');
+    if (c) { document.getElementById('regCompany').value = c; companyCheck(); }
+  })();
+
+  /* instant "already registered" feedback on the company field — fires as soon
+     as typing pauses (or the field loses focus), no need to submit the form */
+  var _ccTimer = null, _ccLast = '';
+  function companyCheckDebounced() {
+    clearTimeout(_ccTimer);
+    _ccTimer = setTimeout(companyCheck, 450);
+  }
+  async function companyCheck() {
+    var name = document.getElementById('regCompany').value.trim();
+    var note = document.getElementById('companyTaken');
+    if (!name) { note.style.display = 'none'; _ccLast = ''; return; }
+    if (name === _ccLast) return;          // unchanged since the last check
+    _ccLast = name;
+    try {
+      var res = await fetch('/api/register/company-status?name=' + encodeURIComponent(name));
+      var data = await res.json();
+      /* only apply if the field still holds the name we checked */
+      if (document.getElementById('regCompany').value.trim() !== name) return;
+      note.style.display = data.registered ? 'block' : 'none';
+    } catch (e) { /* network hiccup: stay quiet, submit still validates */ }
+  }
+
   function togglePw(id, btn) {
     var f = document.getElementById(id);
     var on = f.type === 'password';
@@ -141,16 +243,15 @@
   async function doRegister() {
     document.getElementById('regErr').style.display = 'none';
     var body = {
+      company: document.getElementById('regCompany').value.trim(),
       username: document.getElementById('regUser').value.trim(),
-      full_name: document.getElementById('regName').value.trim(),
       email: document.getElementById('regEmail').value.trim(),
-      role: document.getElementById('regRole').value,
       password: document.getElementById('regPw').value
     };
     var pw2 = document.getElementById('regPw2').value;
 
-    if (!body.username || !body.full_name || !body.password) {
-      showErr('Username, full name and password are required.');
+    if (!body.company || !body.username || !body.email || !body.password) {
+      showErr('Company, username, email and password are required.');
       return;
     }
     if (body.password !== pw2) {
@@ -179,7 +280,16 @@
     var data = await res.json().catch(function () { return {}; });
     btn.disabled = false;
     if (res.ok && data.ok) {
-      location.href = '/login?registered=1';
+      if (data.mode === 'pending') {
+        // self-registration into an existing org -> awaiting manager approval
+        document.getElementById('regForm').style.display = 'none';
+        document.getElementById('regDone').style.display = 'block';
+        document.getElementById('regDoneMsg').textContent = data.message ||
+          'A manager will review and approve your account. You can sign in once it is approved.';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        location.href = '/login?registered=1';
+      }
     } else {
       showErr(data.error || 'Registration failed.');
     }

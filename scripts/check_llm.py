@@ -17,8 +17,60 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.settings import settings   # noqa: E402
 
 
-def main():
+def main_ollama():
+    """Diagnostic for the local Ollama provider."""
+    import urllib.request
     ok = True
+    host = settings.OLLAMA_HOST.rstrip("/")
+    print(f"provider: ollama  ({host}, model {settings.OLLAMA_MODEL})")
+
+    print("1. server reachable")
+    try:
+        with urllib.request.urlopen(host + "/api/tags", timeout=5) as r:
+            tags = json.loads(r.read().decode())
+        names = [m.get("name", "") for m in tags.get("models", [])]
+        print("   OK - models:", ", ".join(names) or "(none pulled)")
+    except Exception as exc:
+        print("   FAILED -", type(exc).__name__, exc)
+        print("   fix: start Ollama (it serves on :11434), then re-run")
+        return 1
+
+    print(f"2. model {settings.OLLAMA_MODEL} pulled")
+    base = settings.OLLAMA_MODEL.split(":")[0]
+    if any(base in n for n in names):
+        print("   OK")
+    else:
+        print(f"   FAILED - run: ollama pull {settings.OLLAMA_MODEL}")
+        return 1
+
+    print("3. live JSON call")
+    try:
+        body = json.dumps({
+            "model": settings.OLLAMA_MODEL,
+            "messages": [{"role": "user", "content": 'Reply with strict JSON: {"status":"ok"}'}],
+            "stream": False, "format": "json",
+            "keep_alive": settings.OLLAMA_KEEP_ALIVE,
+        }).encode()
+        req = urllib.request.Request(host + "/api/chat", data=body,
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            data = json.loads(r.read().decode())
+        out = json.loads((data.get("message") or {}).get("content", ""))
+        print("   OK -", out)
+    except Exception as exc:
+        print("   FAILED -", type(exc).__name__, exc)
+        ok = False
+
+    print("\nRESULT:", "LLM analysis is working." if ok else "LLM analysis is NOT working.")
+    return 0 if ok else 1
+
+
+def main():
+    if settings.LLM_PROVIDER == "ollama":
+        return main_ollama()
+
+    ok = True
+    print("provider: groq")
 
     print("1. groq package")
     try:

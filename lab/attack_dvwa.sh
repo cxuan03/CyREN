@@ -25,7 +25,7 @@ set -uo pipefail
 
 # ----------------------------------------------------------------- config
 TARGET="${TARGET:-192.168.56.101}"        # DVWA victim
-IFACE="${IFACE:-eth0}"                     # Kali interface on the 56.0/24 net
+IFACE="${IFACE:-eth1}"                     # Kali interface on the 56.0/24 net
 DVWA_USER="${DVWA_USER:-admin}"
 DVWA_PASS="${DVWA_PASS:-password}"
 
@@ -121,7 +121,7 @@ use_source() {   # route traffic to the target out of a chosen alias
 
 cleanup() {
   c_info "cleaning up aliases and route"
-  ip route replace "$TARGET" dev "$IFACE" 2>/dev/null || true
+  ip route del "$TARGET" 2>/dev/null || true
   for ip in "${ALIASES[@]}"; do ip addr del "$ip/24" dev "$IFACE" 2>/dev/null || true; done
   rm -f "$COOKIE_JAR" "$PASSLIST" 2>/dev/null || true
 }

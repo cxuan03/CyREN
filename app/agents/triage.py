@@ -125,10 +125,27 @@ class TriageAgent:
                 return name
         return "Unclassified"
 
+    def _thresholds(self):
+        """Live risk thresholds: a manager can change these from the UI (stored
+        in the Setting table); otherwise the .env defaults apply."""
+        hi, lo = settings.HIGH_RISK_THRESHOLD, settings.LOW_RISK_THRESHOLD
+        try:
+            from app.models.db import Setting
+            h = Setting.get("high_risk_threshold")
+            l = Setting.get("low_risk_threshold")
+            if h is not None:
+                hi = float(h)
+            if l is not None:
+                lo = float(l)
+        except Exception:
+            pass
+        return hi, lo
+
     def _route(self, confidence: float) -> str:
-        if confidence >= settings.HIGH_RISK_THRESHOLD:
+        hi, lo = self._thresholds()
+        if confidence >= hi:
             return "high"
-        if confidence <= settings.LOW_RISK_THRESHOLD:
+        if confidence <= lo:
             return "low"
         return "uncertain"
 

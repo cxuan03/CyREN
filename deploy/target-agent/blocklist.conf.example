@@ -1,0 +1,8 @@
+# CyREN blocklist sync configuration — copy to /etc/cyren/blocklist.conf
+# and fill in the token. Keep this file root-only (chmod 600).
+
+# CyREN runs on the Windows host; on the host-only network it is 192.168.56.1
+CYREN_URL=http://192.168.56.1:5000/api/blocklist
+
+# Paste the value of BLOCKLIST_TOKEN from CyREN's .env (never commit it)
+TOKEN=PASTE_BLOCKLIST_TOKEN_HERE

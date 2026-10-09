@@ -55,6 +55,46 @@ def _phase(attack_type: str) -> str:
     return KILL_CHAIN.get(attack_type, (99, "Unknown"))[1]
 
 
+_CHAIN_RANK = {"MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+
+
+def compute_chain(events: list) -> dict:
+    """The chain maths, shared by the agent and the API recompute.
+
+    `events` are the live (not dismissed) events of one source address as
+    [{attack_type, timestamp, risk?}, ...]. Returns chain_stages (one per
+    attack type, in kill-chain order), phase_count, chain_risk, predicted_next
+    and is_multistage.
+
+    chain_risk is the HIGHER of two views, the way commercial SOC tools do it:
+      * depth  -- how far the attacker got: CRITICAL for >= 3 distinct
+                  kill-chain phases, HIGH for 2, MEDIUM for 1 (Splunk ES's
+                  "multiple ATT&CK tactics" rule);
+      * severity -- the most severe event in the chain: an event triaged
+                  "high" makes the chain at least HIGH (Microsoft Defender's
+                  "incident severity = highest alert severity" rule).
+    A chain left with no live events (all marked false positive) has no risk.
+    """
+    by_type = {}
+    for e in sorted(events, key=lambda e: (_order(e.get("attack_type")), e.get("timestamp") or "")):
+        by_type.setdefault(e.get("attack_type"), e)   # de-duplicate: one stage per attack type
+    stages = list(by_type.values())
+    chain_stages = [{"attack_type": s.get("attack_type"),
+                     "phase": _phase(s.get("attack_type")),
+                     "timestamp": s.get("timestamp", "")}
+                    for s in stages]
+    phases = {s["phase"] for s in chain_stages}
+    if not events:
+        return {"chain_stages": [], "phase_count": 0, "chain_risk": None,
+                "predicted_next": None, "is_multistage": False}
+    by_depth = "CRITICAL" if len(phases) >= 3 else "HIGH" if len(phases) >= 2 else "MEDIUM"
+    by_severity = "HIGH" if any((e.get("risk") or "").lower() == "high" for e in events) else "MEDIUM"
+    risk = by_depth if _CHAIN_RANK[by_depth] >= _CHAIN_RANK[by_severity] else by_severity
+    max_order = max((_order(s.get("attack_type")) for s in stages), default=99)
+    return {"chain_stages": chain_stages, "phase_count": len(phases), "chain_risk": risk,
+            "predicted_next": _NEXT_STAGE.get(max_order), "is_multistage": len(chain_stages) > 1}
+
+
 class CorrelationAgent:
     def __init__(self, event_repo=None):
         # event_repo lets tests inject a fake DB layer; by default the agent
@@ -74,7 +114,8 @@ class CorrelationAgent:
                             Event.status != "dismissed")
                     .all())
             return [{"attack_type": r.attack_type,
-                     "timestamp": r.last_seen.isoformat() if r.last_seen else ""}
+                     "timestamp": r.last_seen.isoformat() if r.last_seen else "",
+                     "risk": r.risk}
                     for r in rows]
         except Exception:
             return []   # no DB / no app context (e.g. unit tests)
@@ -110,30 +151,20 @@ class CorrelationAgent:
         source_ip = state.get("source_ip")
         prior = self._fetch_prior_events(source_ip)
 
-        # include the current event as the newest stage
+        # include the current event as the newest stage, with its triage risk
         current = {"attack_type": state.get("attack_type"),
-                   "timestamp": state.get("last_seen") or datetime.utcnow().isoformat()}
-        # de-duplicate: one stage per attack type
-        by_type = {}
-        for e in self._order_stages(prior + [current]):
-            by_type.setdefault(e.get("attack_type"), e)
-        stages = list(by_type.values())
-
-        chain_stages = [{"attack_type": s.get("attack_type"),
-                         "phase": _phase(s.get("attack_type")),
-                         "timestamp": s.get("timestamp", "")}
-                        for s in stages]
-        phases = {s["phase"] for s in chain_stages}
+                   "timestamp": state.get("last_seen") or datetime.utcnow().isoformat(),
+                   "risk": state.get("risk")}
+        c = compute_chain(prior + [current])
+        chain_stages = c["chain_stages"]
 
         graph = self._build_graph(chain_stages)   # noqa: F841 (used when persisting)
 
-        max_order = max((_order(s.get("attack_type")) for s in stages), default=99)
         state["chain_stages"] = chain_stages
-        state["chain_risk"] = ("CRITICAL" if len(phases) >= 3
-                               else "HIGH" if len(phases) >= 2 else "MEDIUM")
-        state["chain_assessment"] = self._assess(len(phases))
-        state["predicted_next"] = _NEXT_STAGE.get(max_order)
-        state["is_multistage"] = len(chain_stages) > 1
+        state["chain_risk"] = c["chain_risk"]
+        state["chain_assessment"] = self._assess(c["phase_count"])
+        state["predicted_next"] = c["predicted_next"]
+        state["is_multistage"] = c["is_multistage"]
         # chain_id is assigned by the persistence layer when the event is saved
         state["chain_id"] = None
         return state

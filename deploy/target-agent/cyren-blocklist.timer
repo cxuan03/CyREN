@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the CyREN blocklist sync every 10 seconds
+
+[Timer]
+OnBootSec=15
+OnUnitActiveSec=10
+AccuracySec=1
+
+[Install]
+WantedBy=timers.target

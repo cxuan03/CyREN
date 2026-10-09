@@ -19,6 +19,7 @@ Both paths share the same IP extraction, blacklist filtering and aggregation.
 import ipaddress
 import logging
 import re
+import time
 from collections import Counter, defaultdict
 
 from config.settings import settings
@@ -148,18 +149,57 @@ def _extract_source_ip(source: dict, message: str) -> str:
     return _ip_from_message(message, host_ips) or "unknown"
 
 
+class _EsBreaker:
+    """Circuit breaker around the Elasticsearch client.
+
+    When a call fails with a connection error, every further call for the
+    next `hold` seconds fails at once (same exception type) instead of waiting
+    for another TCP timeout. With Elasticsearch down, a page that makes two or
+    three ES calls used to take ten seconds; now only the first call in each
+    window pays the timeout and the rest return immediately. The callers'
+    existing `except Exception` branches handle the raised error as before."""
+    hold = 20.0
+
+    def __init__(self, client):
+        self._c = client
+        self._down_until = 0.0
+
+    def _wrap(self, fn):
+        def call(*a, **kw):
+            if time.time() < self._down_until:
+                raise ConnectionError("Elasticsearch unreachable (recent failure, retry in a few seconds)")
+            try:
+                return fn(*a, **kw)
+            except Exception as exc:
+                name = type(exc).__name__
+                if "Connection" in name or "Timeout" in name:
+                    self._down_until = time.time() + self.hold
+                raise
+        return call
+
+    def __getattr__(self, item):
+        attr = getattr(self._c, item)
+        return self._wrap(attr) if callable(attr) else attr
+
+
 class SiemService:
     def __init__(self):
         self.es = None
         self._source_cache = {}
+        self._rule_cache = (0.0, None)     # (fetched_at, defs) — see _rule_defs
         if Elasticsearch is None:
             log.warning("[siem] elasticsearch package unavailable; running without a SIEM.")
             return
         try:
-            self.es = Elasticsearch(
+            # Fast-fail defaults so a slow/unreachable Elasticsearch can NEVER hang
+            # a web request (e.g. the dashboard's "logs collected" count): bound
+            # every call to a few seconds and do not retry on a dead connection.
+            # Long operations (delete_by_query) still override request_timeout.
+            self.es = _EsBreaker(Elasticsearch(
                 settings.ELASTICSEARCH_URL,
                 basic_auth=(settings.ELASTICSEARCH_USER, settings.ELASTICSEARCH_PASSWORD),
-            )
+                request_timeout=3, max_retries=0, retry_on_timeout=False,
+            ))
         except Exception as exc:
             log.error("[siem] could not connect to %s: %s", settings.ELASTICSEARCH_URL, exc)
             self.es = None
@@ -247,7 +287,7 @@ class SiemService:
                 size=size,
                 sort=[{"@timestamp": {"order": "desc"}}],
                 query={"bool": {"filter": [
-                    {"range": {"@timestamp": {"gte": f"now-{hours}h", "lte": "now"}}},
+                    {"range": {"@timestamp": {"gte": self._ingest_gte(hours), "lte": "now"}}},
                     {"exists": {"field": "kibana.alert.rule.name"}},
                 ]}},
             )
@@ -312,10 +352,31 @@ class SiemService:
         """Enabled detection-rule definitions (name, query, index, severity,
         risk_score), read from Kibana. Used by the filebeat-direct ingest so
         CyREN matches the same queries the analyst configured, without needing
-        the Kibana detection engine to be running."""
+        the Kibana detection engine to be running.
+
+        Cached for 60 seconds: the Event Details page and the poller both call
+        this, and rule definitions change rarely, so one Kibana read a minute
+        is plenty. While Elasticsearch is down the fallback set is cached too,
+        so a page never waits on a dead connection more than once a minute."""
+        fetched_at, cached = self._rule_cache
+        if cached is not None and time.time() - fetched_at < 60:
+            return cached
+        defs = self._read_rule_defs()
+        self._rule_cache = (time.time(), defs)
+        return defs
+
+    def _read_rule_defs(self) -> list:
         try:
-            res = self.es.search(index=settings.KIBANA_RULES_INDEX, size=200,
-                                  query={"term": {"type": "alert"}})
+            # .kibana_alerting_cases* is a Kibana SYSTEM index: Elasticsearch warns
+            # that direct reads of it may be blocked in a future major version.
+            # Reading it is still the only way to get the rule definitions
+            # without the Kibana API, so keep the read and quiet the warning.
+            import warnings
+            from elasticsearch import ElasticsearchWarning
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ElasticsearchWarning)
+                res = self.es.search(index=settings.KIBANA_RULES_INDEX, size=200,
+                                      query={"term": {"type": "alert"}})
         except Exception as exc:
             log.warning("[siem] could not read Kibana rule defs (%s); using fallback set", exc)
             return _FALLBACK_RULES
@@ -343,6 +404,24 @@ class SiemService:
         log.info("[siem] using %d detection rule(s) from Kibana for filebeat ingest", len(defs))
         return defs
 
+    def _ingest_gte(self, hours):
+        """Lower bound for ingest queries: the LATER of (now - lookback) and the
+        'ingest_since' watermark. A lab reset sets that watermark to now, so the
+        poller stops re-ingesting the OLD logs still sitting in Elasticsearch
+        and only picks up genuinely new attack traffic."""
+        from datetime import datetime, timedelta
+        floor = datetime.utcnow() - timedelta(hours=hours)
+        try:
+            from app.models.db import Setting
+            wm = Setting.get("ingest_since")
+            if wm:
+                wdt = datetime.fromisoformat(str(wm).replace("Z", "")[:19])
+                if wdt > floor:
+                    floor = wdt
+        except Exception:
+            pass
+        return floor.strftime("%Y-%m-%dT%H:%M:%S")
+
     def _query_filebeat(self, hours: int = None) -> list:
         """Match each detection rule's query directly against the raw filebeat
         logs and normalise the hits into the same alert shape as _query_alerts.
@@ -359,7 +438,7 @@ class SiemService:
                     size=settings.FILEBEAT_MAX_DOCS,
                     sort=[{"@timestamp": {"order": "desc"}}],
                     query={"bool": {"filter": [
-                        {"range": {"@timestamp": {"gte": f"now-{hours}h", "lte": "now"}}},
+                        {"range": {"@timestamp": {"gte": self._ingest_gte(hours), "lte": "now"}}},
                         {"query_string": {"query": _kql_to_lucene(rule["query"])}},
                     ]}},
                 )
@@ -453,6 +532,167 @@ class SiemService:
         log.info("[siem] aggregated into %d event(s): %s", len(events),
                  [(e["source_ip"], e["rule"], e["log_count"]) for e in events])
         return events
+
+    def search_raw_logs(self, q=None, source_ip=None, start=None, end=None,
+                        page=1, per=50, order="desc"):
+        """Read raw filebeat log documents for the Raw Logs viewer — a live,
+        read-only window into Elasticsearch (nothing is copied into CyREN's DB).
+
+        Returns (rows, total). Each row: {id, timestamp, source_ip, dest, rule,
+        message}. Optional free-text `q` (Lucene), `source_ip`, and a
+        [start, end) time window (naive UTC datetimes). Paginated.
+        """
+        if self.es is None:
+            return None, 0
+        filters = []
+        if start or end:
+            rng = {}
+            if start:
+                rng["gte"] = start.isoformat()
+            if end:
+                rng["lt"] = end.isoformat()
+            filters.append({"range": {"@timestamp": rng}})
+        if source_ip:
+            # match a parsed source.ip OR the address appearing in the message
+            filters.append({"bool": {"should": [
+                {"term": {"source.ip": source_ip}},
+                {"match_phrase": {"message": source_ip}},
+            ], "minimum_should_match": 1}})
+        if q:
+            filters.append({"query_string": {"query": _kql_to_lucene(q),
+                                              "default_field": "message"}})
+        query = {"bool": {"filter": filters}} if filters else {"match_all": {}}
+        frm = max(0, (int(page) - 1) * int(per))
+        if order not in ("asc", "desc"):
+            order = "desc"
+        try:
+            resp = self.es.search(
+                index=settings.FILEBEAT_INDEX, from_=frm, size=int(per),
+                sort=[{"@timestamp": {"order": order}}],
+                query=query, request_timeout=6, track_total_hits=True)
+        except Exception as exc:
+            log.warning("[siem] search_raw_logs failed: %s", exc)
+            return None, 0
+        rows = []
+        for hit in resp["hits"]["hits"]:
+            s = hit["_source"]
+            msg = (_get(s, "message") or "")[:800]
+            rows.append({
+                "id": hit["_id"],
+                "timestamp": _get(s, "@timestamp", ""),
+                "source_ip": _extract_source_ip(s, msg),
+                "dest": _get(s, "destination.ip") or _get(s, "host.name", ""),
+                "rule": _get(s, "event.category") or _get(s, "log.file.path") or "",
+                "message": msg,
+                "raw": {k: s[k] for k in list(s)[:40]},
+            })
+        total = resp["hits"]["total"]
+        total = total.get("value", 0) if isinstance(total, dict) else int(total or 0)
+        return rows, total
+
+    def purge_filebeat_before(self, cutoff_iso):
+        """DELETE filebeat log documents older than cutoff_iso (an ISO string).
+        Destructive — used by a lab reset with --purge-es to actually clear the
+        old telemetry from Elasticsearch. Returns how many docs were deleted."""
+        if self.es is None:
+            return 0
+        resp = self.es.delete_by_query(
+            index=settings.FILEBEAT_INDEX,
+            query={"range": {"@timestamp": {"lt": cutoff_iso}}},
+            conflicts="proceed", request_timeout=120, refresh=True)
+        return int(resp.get("deleted", 0))
+
+    def latest_log_time(self):
+        """The newest @timestamp in the filebeat index (ISO string), or None.
+        Used to warn the analyst when log shipping has stalled."""
+        if self.es is None:
+            return None
+        try:
+            resp = self.es.search(index=settings.FILEBEAT_INDEX, size=0,
+                                  aggs={"m": {"max": {"field": "@timestamp"}}},
+                                  request_timeout=6)
+            return resp["aggregations"]["m"].get("value_as_string")
+        except Exception as exc:
+            log.warning("[siem] latest_log_time failed: %s", exc)
+            return None
+
+    def fetch_raw_logs_by_ids(self, ids):
+        """Fetch specific raw log documents by their ES _id (the Report
+        Builder's hand-picked rows). Same row shape as search_raw_logs,
+        newest first. Returns None if Elasticsearch is unavailable."""
+        if self.es is None or not ids:
+            return None if self.es is None else []
+        try:
+            resp = self.es.search(
+                index=settings.FILEBEAT_INDEX, size=len(ids),
+                sort=[{"@timestamp": {"order": "desc"}}],
+                query={"ids": {"values": list(ids)}}, request_timeout=6)
+        except Exception as exc:
+            log.warning("[siem] fetch_raw_logs_by_ids failed: %s", exc)
+            return None
+        rows = []
+        for hit in resp["hits"]["hits"]:
+            s = hit["_source"]
+            msg = (_get(s, "message") or "")[:800]
+            rows.append({
+                "id": hit["_id"],
+                "timestamp": _get(s, "@timestamp", ""),
+                "source_ip": _extract_source_ip(s, msg),
+                "dest": _get(s, "destination.ip") or _get(s, "host.name", ""),
+                "rule": _get(s, "event.category") or _get(s, "log.file.path") or "",
+                "message": msg,
+            })
+        return rows
+
+    def count_logs(self, start=None, end=None):
+        """Total raw log documents in the filebeat index, optionally within a
+        [start, end) window (naive UTC datetimes, as the app stores them).
+
+        This backs the dashboard's "logs collected" figure: the real volume of
+        telemetry Filebeat shipped into Elasticsearch, not just the lines that
+        matched a detection rule. Returns None if Elasticsearch is unavailable
+        so the caller can fall back to the aggregated event log-line sum.
+        """
+        if self.es is None:
+            return None
+        import time
+        now = time.time()
+        # circuit-breaker: after a failure, stop hammering a down ES for 30s so
+        # the dashboard does not wait on the timeout on every poll.
+        if now < getattr(self, "_count_cooldown_until", 0.0):
+            return None
+        # short cache: the dashboard auto-refreshes every few seconds, but the raw
+        # log volume barely changes second-to-second. Reuse a recent count for the
+        # SAME window for 20s so each refresh doesn't pay a fresh ES round-trip.
+        ck = (start.isoformat() if start else None, end.isoformat() if end else None)
+        cached = getattr(self, "_count_cache", None)
+        if cached and cached[0] == ck and now - cached[2] < 20:
+            return cached[1]
+        # "logs collected" reflects the REAL Elasticsearch volume for the
+        # requested window and nothing else: the dashboard's date preset already
+        # sends a local-day [from, to] range (e.g. "Today" = Kuala-Lumpur
+        # midnight -> now), so this count matches exactly what Kibana shows for
+        # the same range. No ingest-watermark clamp here — the watermark still
+        # governs which logs become events (see _ingest_gte), but it must not
+        # shrink this display figure below the window the user actually picked.
+        try:
+            query = {"match_all": {}}
+            if start or end:
+                rng = {}
+                if start:
+                    rng["gte"] = start.isoformat()
+                if end:
+                    rng["lt"] = end.isoformat()
+                query = {"bool": {"filter": [{"range": {"@timestamp": rng}}]}}
+            resp = self.es.count(index=settings.FILEBEAT_INDEX, query=query,
+                                 request_timeout=2)
+            val = int(resp.get("count", 0))
+            self._count_cache = (ck, val, now)
+            return val
+        except Exception as exc:
+            self._count_cooldown_until = now + 30
+            log.warning("[siem] count_logs failed (%s); backing off 30s", exc)
+            return None
 
 
 siem_service = SiemService()

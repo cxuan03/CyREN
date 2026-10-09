@@ -1,0 +1,8 @@
+[Unit]
+Description=CyREN blocklist sync (ipset enforcement)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cyren-blocklist-sync.sh

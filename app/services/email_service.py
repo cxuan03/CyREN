@@ -41,7 +41,9 @@ def send_alert_email(to: str, subject: str, html_body: str) -> bool:
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
             server.starttls()
             if settings.SMTP_USER:
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                # app passwords are shown grouped with spaces ("abcd efgh ..."),
+                # but must be sent without them, so strip whitespace defensively.
+                server.login(settings.SMTP_USER, (settings.SMTP_PASSWORD or "").replace(" ", ""))
             server.send_message(msg)
         log.info("[email] alert sent to %s", to)
         return True
@@ -61,10 +63,36 @@ def build_alert_email(state: dict) -> tuple:
     except (TypeError, ValueError):
         conf_pct = "n/a"
     summary = state.get("llm_summary") or {}
+    # deterministic "why this is an attack" evidence, shared with the event page;
+    # the attacker-controlled signature is HTML-escaped so the email is safe.
+    from app.services.attack_evidence import attack_evidence
+    from html import escape as _esc
+    ev = attack_evidence(state.get("attack_type"), state.get("raw_logs"),
+                         rule=state.get("rule"), mitre=state.get("mitre_techniques"),
+                         log_count=state.get("log_count"))
+    ev_reason = _esc(ev.get("reason") or "")
+    ev_sig = (f'<div style="font-family:monospace;font-size:12px;background:#f5f5f5;'
+              f'color:#b00020;padding:8px;border-radius:4px;margin-top:6px;'
+              f'word-break:break-all">{_esc(ev["signature"])}</div>'
+              if ev.get("signature") else "")
     # deep-link: the app reads #ip=<ip> on load and jumps to that source
     link = settings.APP_BASE_URL.rstrip("/") + "/#ip=" + ip
 
-    subject = f"[CyREN] High risk: {attack} from {ip} - IP blocked"
+    # the email reflects the ACTUAL action, so it stays truthful whether the
+    # source was auto-blocked or routed to human approval (auto-block off).
+    blocked = bool(state.get("blocked"))
+    if blocked:
+        banner = "HIGH RISK — automatic block applied"
+        lead = ("and the source IP has been <b>blocked at the target server's firewall</b>.")
+        action = "Blocklist entry added; the target server applies it with ipset"
+    else:
+        banner = "HIGH RISK — awaiting your approval"
+        lead = ("and is <b>waiting for your decision</b> in the Human Approval "
+                "queue. No block has been applied yet.")
+        action = "Awaiting analyst approval (auto-block is off)"
+
+    subject = (f"[CyREN] High risk: {attack} from {ip} - "
+               + ("IP blocked" if blocked else "needs approval"))
     html = f"""\
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:620px;margin:auto;
             border:2px solid #1a1a1a;border-radius:10px;overflow:hidden">
@@ -73,11 +101,10 @@ def build_alert_email(state: dict) -> tuple:
     <div style="color:#fff;font-size:12px">SOC INCIDENT RESPONSE</div>
   </div>
   <div style="background:#ff5252;color:#fff;padding:10px 20px;font-weight:700">
-    HIGH RISK — automatic block applied
+    {banner}
   </div>
   <div style="padding:20px;color:#1a1a1a;font-size:14px;line-height:1.6">
-    <p><b>{attack}</b> was detected from <code>{ip}</code> and the source IP has
-       been blocked at the firewall.</p>
+    <p><b>{attack}</b> was detected from <code>{ip}</code> {lead}</p>
     <table style="border-collapse:collapse;width:100%;margin:10px 0">
       <tr><td style="padding:4px 8px;color:#666">Source IP</td>
           <td style="padding:4px 8px"><code>{ip}</code></td></tr>
@@ -86,8 +113,10 @@ def build_alert_email(state: dict) -> tuple:
       <tr><td style="padding:4px 8px;color:#666">Confidence</td>
           <td style="padding:4px 8px">{conf_pct}</td></tr>
       <tr><td style="padding:4px 8px;color:#666">Action taken</td>
-          <td style="padding:4px 8px">iptables DROP rule added</td></tr>
+          <td style="padding:4px 8px">{action}</td></tr>
     </table>
+    <p style="margin:8px 0"><b>Why this is flagged as an attack:</b><br>{ev_reason}</p>
+    {ev_sig}
     <p style="margin:8px 0"><b>What happened:</b><br>{summary.get('what_happened', 'N/A')}</p>
     <p style="margin:8px 0"><b>Recommended action:</b><br>{summary.get('what_should_be_done', 'N/A')}</p>
     <p style="text-align:center;margin:24px 0 8px">

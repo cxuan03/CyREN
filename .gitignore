@@ -20,3 +20,24 @@ lab/dataset_manifest.csv
 
 # jupyter
 .ipynb_checkpoints/
+
+# secrets - never publish
+.env.enc
+*.pem
+*.key
+
+# private runtime data (real DB, chat uploads, attachments, backups)
+data/*.db
+data/*.db.*
+data/uploads/
+data/report_attachments/
+data/models/backups/
+data/threat_feed/
+instance/
+
+# local-only clutter
+.claude/
+explainer/
+*.docx
+~$*
+*.bundle

@@ -1,0 +1,7 @@
+# IPs that must NEVER be blocked, one per line (exact IPv4, no CIDR).
+# The sync script skips these even if they somehow appear in the feed.
+127.0.0.1
+192.168.56.1
+192.168.56.101
+# add your admin/workstation IP below, e.g.:
+# 192.168.56.50

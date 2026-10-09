@@ -77,6 +77,39 @@ esac
 command -v curl >/dev/null 2>&1 || { c_err "missing tool: curl"; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# ---------------------------------------------- IP-pool range / overlap guard
+# Source IPs are IP_PREFIX.(OCT0 + index). A /24 host octet must stay in 1..254
+# (256+ is not a valid IP, 255 is broadcast), and the attack and benign pools
+# must not overlap (an IP used for BOTH corrupts its label AND reuses an IP the
+# firewall already blocked as an attacker). Fail HERE with the real limits,
+# instead of mid-run with a flood of ".259 could not set route" / login-failed.
+_atk_last=$(( ATTACK_OCT0 + N_ATTACK - 1 ))
+_ben_last=$(( BENIGN_OCT0 + N_BENIGN - 1 ))
+_bad=0
+if [ "$N_ATTACK" -gt 0 ] && { [ "$ATTACK_OCT0" -lt 1 ] || [ "$_atk_last" -gt 254 ]; }; then
+  c_err "attack pool ${IP_PREFIX}.${ATTACK_OCT0}..${IP_PREFIX}.${_atk_last} leaves the valid 1..254 range."
+  c_err "  with ATTACK_OCT0=${ATTACK_OCT0}, --attack can be at most $(( 255 - ATTACK_OCT0 ))."
+  _bad=1
+fi
+if [ "$N_BENIGN" -gt 0 ] && { [ "$BENIGN_OCT0" -lt 1 ] || [ "$_ben_last" -gt 254 ]; }; then
+  c_err "benign pool ${IP_PREFIX}.${BENIGN_OCT0}..${IP_PREFIX}.${_ben_last} leaves the valid 1..254 range."
+  c_err "  with BENIGN_OCT0=${BENIGN_OCT0}, --benign can be at most $(( 255 - BENIGN_OCT0 ))."
+  _bad=1
+fi
+if [ "$N_ATTACK" -gt 0 ] && [ "$N_BENIGN" -gt 0 ] \
+   && [ "$ATTACK_OCT0" -le "$_ben_last" ] && [ "$BENIGN_OCT0" -le "$_atk_last" ]; then
+  c_err "attack pool .${ATTACK_OCT0}..${_atk_last} OVERLAPS benign pool .${BENIGN_OCT0}..${_ben_last}."
+  c_err "  the shared IPs get labelled BOTH ways and reuse a blocked attacker IP -> login fails."
+  _bad=1
+fi
+if [ "$_bad" = 1 ]; then
+  c_err "fix: keep each pool inside 1..254 and non-overlapping."
+  c_err "     with the defaults (attack from .${ATTACK_OCT0}, benign from .${BENIGN_OCT0}) a safe run is:"
+  c_err "       ./collect_dataset.sh --attack 30 --benign 50"
+  c_err "     for more, move a pool: ATTACK_OCT0=10 BENIGN_OCT0=60 ./collect_dataset.sh --attack 30 --benign 40"
+  exit 2
+fi
+
 # --------------------------------------------------------------- helpers
 rnd()  { echo $(( RANDOM % ($2 - $1 + 1) + $1 )); }
 pause() { local ms; ms=$(rnd "$DELAY_MS_MIN" "$DELAY_MS_MAX"); sleep "$(awk "BEGIN{printf \"%.3f\", $ms/1000}")"; }

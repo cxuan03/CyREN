@@ -44,6 +44,11 @@ RULE_MAP = {
 FEATURES = ["rule_encoded", "risk_score", "severity_num", "has_keyword", "request_count"]
 
 
+# a class with fewer real rows than this is topped up with the built-in
+# patterns when --synthetic-if-needed is given (cold start only)
+MIN_REAL_PER_CLASS = 20
+
+
 def generate_training_data() -> pd.DataFrame:
     """Labelled dataset from the attack patterns observed in the lab.
     label 1 = true positive (real attack), 0 = false positive."""
@@ -121,15 +126,43 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", help="labelled CSV (from export_training_set.py); "
                                     "default uses the built-in synthetic patterns")
+    ap.add_argument("--with-synthetic", action="store_true",
+                    help="with --data: ALWAYS add the built-in synthetic patterns")
+    ap.add_argument("--synthetic-if-needed", action="store_true",
+                    help="with --data: add the built-in synthetic patterns only when the "
+                         "real set is missing a class or has fewer than MIN_REAL_PER_CLASS "
+                         "rows of one (cold-start safety net; real data takes over on its own)")
     args = ap.parse_args()
 
     if args.data:
         print(f"Loading training data from {args.data} ...")
         df = load_csv(args.data)
+        n_tp = int((df["label"] == 1).sum()) if len(df) else 0
+        n_fp = int((df["label"] == 0).sum()) if len(df) else 0
+        print(f"Real rows: {n_tp} true positive, {n_fp} false positive")
+        add = args.with_synthetic
+        if args.synthetic_if_needed and not add:
+            thin = n_tp < MIN_REAL_PER_CLASS or n_fp < MIN_REAL_PER_CLASS
+            if thin:
+                why = ("no false-positive rows" if n_fp == 0 else
+                       "no true-positive rows" if n_tp == 0 else
+                       f"fewer than {MIN_REAL_PER_CLASS} real rows in one class")
+                print(f"Real set is thin ({why}): adding the built-in synthetic patterns")
+            else:
+                print("Real set has both classes with enough rows: synthetic patterns not needed")
+            add = thin
+        if add:
+            base = generate_training_data()
+            df = pd.concat([base, df], ignore_index=True)
+            print(f"  + {len(base)} built-in synthetic rows")
     else:
         print("Generating training data from labelled attack patterns...")
         df = generate_training_data()
     X, y = df[FEATURES], df["label"]
+    print(f"Label counts: {int((y == 1).sum())} true positive, {int((y == 0).sum())} false positive")
+    if y.nunique() < 2:
+        raise SystemExit("Training set has only one class; add benign samples "
+                         "or pass --with-synthetic.")
 
     X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
     print(f"Training samples: {len(X_tr)}  |  Testing samples: {len(X_te)}")

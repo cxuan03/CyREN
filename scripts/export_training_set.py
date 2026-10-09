@@ -29,6 +29,12 @@ directly, so you never hand-paste dozens of session IPs. It is UNIONed with the
 default --attack-ips/--benign-ips, so old fixed-IP data is labelled at the same
 time.
 
+Analyst decisions come first. An event a human has decided on (it has at
+least one Decision row: Mark as false positive, Block IP, Undo) is labelled by
+where it ENDED UP: status dismissed -> 0 (false positive), status blocked ->
+1 (real attack), whatever its source IP. An event left awaiting / logged after
+an Undo has no verdict and falls back to the IP lists.
+
 IMPORTANT: source_ip is used ONLY to derive the label; it is NEVER written to
 the training CSV as a feature (that would let the model memorise IPs instead
 of learning behaviour). A separate manifest CSV records the IP -> label mapping
@@ -43,7 +49,7 @@ from collections import Counter
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app                              # noqa: E402
-from app.models.db import Event                         # noqa: E402
+from app.models.db import Event, Decision, Whitelist    # noqa: E402
 from app.agents.triage import has_attack_keyword        # noqa: E402  (shared logic)
 
 # Keep in sync with scripts/train_triage.py RULE_MAP (the inference encoding).
@@ -149,11 +155,35 @@ def main():
     with app.app_context():
         events = Event.query.order_by(Event.id).all()
 
+        # analyst labels: events a human decided on, labelled by their final
+        # state (dismissed -> 0, blocked -> 1). An undo that leaves the event
+        # awaiting has no verdict and is not labelled here.
+        decided = {d.event_id for d in Decision.query.with_entities(Decision.event_id).all()}
+        analyst = {}
+        for ev in events:
+            if ev.id not in decided:
+                continue
+            if ev.status == "dismissed":
+                analyst[ev.id] = 0
+            elif ev.status in ("blocked", "unblocked"):
+                analyst[ev.id] = 1
+
         rows, manifest = [], []
         counts = Counter()
+        whitelisted = {w.ip for w in Whitelist.query.all()}
         for e in events:
             ip, rule = e.source_ip, e.rule or ""
-            if ip in attack_ips:
+            if ip in whitelisted:
+                # a trusted source (scanner, probe): its traffic is not a lesson
+                # about attack shape either way, so it stays out of the set
+                counts["skipped_whitelisted"] += 1
+                continue
+            label_src = "ip"
+            if e.id in analyst:
+                label = analyst[e.id]
+                label_src = "analyst"
+                counts["analyst_labelled"] += 1
+            elif ip in attack_ips:
                 label = 1
             elif ip in benign_ips:
                 if rule in BENIGN_EXCLUDE_RULES:
@@ -179,7 +209,8 @@ def main():
             rows.append(row)
             manifest.append({"event_id": e.id, "source_ip": ip, "rule": rule,
                              "has_keyword": row["has_keyword"],
-                             "request_count": row["request_count"], "label": label})
+                             "request_count": row["request_count"], "label": label,
+                             "label_source": label_src})
             counts["attack" if label == 1 else "benign"] += 1
 
         # training CSV: features + label, NO source_ip
@@ -191,7 +222,8 @@ def main():
         # manifest: audit trail (source_ip lives here only, never in training CSV)
         with open(man_path, "w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=["event_id", "source_ip", "rule",
-                                               "has_keyword", "request_count", "label"])
+                                               "has_keyword", "request_count", "label",
+                                               "label_source"])
             w.writeheader()
             w.writerows(manifest)
 
@@ -199,6 +231,8 @@ def main():
     print(f"manifest     : {man_path}")
     print(f"  attack (1) : {counts['attack']}")
     print(f"  benign (0) : {counts['benign']}")
+    print(f"  of which   : {counts['analyst_labelled']} labelled by analyst decisions")
+    print(f"  whitelisted: {counts['skipped_whitelisted']} events from trusted sources skipped")
     print(f"  excluded   : {counts['excluded_benign_contaminated']} "
           f"(benign SSH/Port Scan), {counts['skipped_unlabelled']} unlabelled sources")
     if counts["benign"] == 0:

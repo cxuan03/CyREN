@@ -38,28 +38,55 @@ class Asset(db.Model):
     ip = db.Column(db.String(45), unique=True, index=True)
     name = db.Column(db.String(128))
     criticality = db.Column(db.String(16), default="unknown")   # critical|high|medium|low
-    owner = db.Column(db.String(128))
-    os = db.Column(db.String(64))
-    services = db.Column(db.JSON)   # ["Apache", "MySQL", "SSH"]
+    department = db.Column(db.String(128))   # owning department, e.g. "Finance"
+    owner = db.Column(db.String(128))        # employee number / person, e.g. "EMP-1020"
+    os = db.Column(db.String(64))            # legacy, no longer shown or edited
+    services = db.Column(db.JSON)            # legacy, no longer shown or edited
+    # what the machine is for and whose it is, in the administrator's own words,
+    # e.g. "Web server running DVWA, the attack target of the lab"
+    description = db.Column(db.String(300))
 
     def to_dict(self):
         return {
             "id": self.id, "ip": self.ip, "name": self.name,
-            "criticality": self.criticality, "owner": self.owner,
-            "os": self.os, "services": self.services or [],
+            "criticality": self.criticality, "department": self.department,
+            "owner": self.owner, "description": self.description,
         }
+
+
+# The SIEM logs the lab target by hostname (host.name), not IP — so events carry
+# dest_ip="target-server". Map those known hostnames to their real inventory IP so
+# asset enrichment resolves. Real dest IPs (future attacks on other victims) match
+# directly and skip this table.
+SIEM_HOST_ALIASES = {
+    "target-server": "192.168.56.101",   # DVWA-WEB
+}
+
+
+def resolve_dest_ip(dest) -> str:
+    """Turn an event's dest (IP or SIEM hostname) into an inventory IP."""
+    if not dest:
+        return dest
+    d = str(dest)
+    if d in SIEM_HOST_ALIASES:
+        return SIEM_HOST_ALIASES[d]
+    return d
 
 
 class AssetAssessment:
     def lookup(self, ip: str) -> dict:
         """
-        Return the asset record for an IP, or an 'unknown' placeholder.
-        Safe to call outside an app context (returns 'unknown').
+        Return the asset record for an IP (or SIEM hostname), or an 'unknown'
+        placeholder. Safe to call outside an app context (returns 'unknown').
         """
+        ip = resolve_dest_ip(ip)
         unknown = {"ip": ip, "name": None, "criticality": "unknown",
                    "owner": None, "os": None, "services": [], "risk_adjustment": 0}
         try:
             asset = Asset.query.filter_by(ip=ip).first()
+            if asset is None:
+                # also try matching by hostname/name for anything not aliased above
+                pass
         except Exception:
             return unknown
         if asset is None:
@@ -69,6 +96,7 @@ class AssetAssessment:
         return d
 
     def criticality_bump(self, ip: str) -> int:
+        ip = resolve_dest_ip(ip)
         try:
             asset = Asset.query.filter_by(ip=ip).first()
         except Exception:
