@@ -60,7 +60,7 @@ def _wrap(text, max_w, font="Helvetica", size=11):
 # content of the report changes: callers compare it against the stored
 # file_path and regenerate anything produced by an older version, so reports
 # on disk never lag behind the current design.
-REPORT_FORMAT_VERSION = "v34"  # v34: unknown target shown as Unknown + resolved IP; v33: asset description column; v32: asset names by site; v31: comments as a table; v30: analyst comment thread with images; v29: dated analyst summaries; v28: discussion, notes, target asset in Alert Details; v27: no log-count caption; v26: 12-hour clock, first/last seen split; v25: user-chosen section order; v24: activity order, audit labels in words; v23: wide tables may shrink to 8 pt; v22: date/time split, local time, no stranded headings; v21: ticket description as a row; v20: self-sizing columns, no count captions; v19: response rows split; v18: ticket rows split, no caption; v17: response table in plain words; v16: no reputation row; v15: no response caption, whitelisted wording, log dividers; v14: reputation in words; v13: measured wrapping, chain order; v12: chain as one block, terminal log box; v11: header dividers; v10: AI Analysis as a table; v9: boxed confidence block; v8: no card frame, darker grid; v7: square bar corners; v6: bar flush on its content; v5: larger type; v4: logo header; v3: Case Ticket
+REPORT_FORMAT_VERSION = "v35"  # v35: no "Showing the first N of M" caption above the raw log box; v34: unknown target shown as Unknown + resolved IP; v33: asset description column; v32: asset names by site; v31: comments as a table; v30: analyst comment thread with images; v29: dated analyst summaries; v28: discussion, notes, target asset in Alert Details; v27: no log-count caption; v26: 12-hour clock, first/last seen split; v25: user-chosen section order; v24: activity order, audit labels in words; v23: wide tables may shrink to 8 pt; v22: date/time split, local time, no stranded headings; v21: ticket description as a row; v20: self-sizing columns, no count captions; v19: response rows split; v18: ticket rows split, no caption; v17: response table in plain words; v16: no reputation row; v15: no response caption, whitelisted wording, log dividers; v14: reputation in words; v13: measured wrapping, chain order; v12: chain as one block, terminal log box; v11: header dividers; v10: AI Analysis as a table; v9: boxed confidence block; v8: no card frame, darker grid; v7: square bar corners; v6: bar flush on its content; v5: larger type; v4: logo header; v3: Case Ticket
 
 PAGE_W, PAGE_H = 595, 842          # A4 in points
 MARGIN = 45
@@ -731,11 +731,7 @@ def _render_event_sections(d, state):
     # 7. Raw logs ----------------------------------------------------------
     sample = state.get("raw_log_sample") or state.get("raw_logs") or []
     d.section("Raw Log Sample", keep=30 + min(len(sample) or 1, 6) * 20)
-    if sample:
-        total = state.get("log_count") or len(sample)
-        # no line count above the box; only say so when ES capped the pull
-        if total and total > len(sample):
-            d.caption(f"Showing the first {len(sample)} of {total} log lines.")
+    # no line count above the box, even when the pull was capped
     d.code_box(sample)
 
     # 8. Response ----------------------------------------------------------
