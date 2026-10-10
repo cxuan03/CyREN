@@ -40,28 +40,29 @@ _FROM_IP_RE = re.compile(r"\bfrom (\d{1,3}(?:\.\d{1,3}){3})\b")
 
 _SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
-# Used only if the detection-rule definitions cannot be read from Kibana. The
-# queries mirror the lab rules (path-based, so real payloads and benign visits
-# both match); query_string needs uppercase AND.
+# Used only if the detection-rule definitions cannot be read from Kibana.
+# Values mirror the Kibana rules as of 2026-10-10. The queries are path-based
+# (so real payloads and benign visits both match); query_string needs
+# uppercase AND.
 _FALLBACK_RULES = [
     {"name": "SQL Injection Detected",
      "query": 'host.name: "target-server" AND message: "vulnerabilities/sqli"',
-     "index": ["filebeat*"], "severity": "high", "risk_score": 73},
+     "index": ["filebeat-*"], "severity": "high", "risk_score": 73},
     {"name": "XSS Attack Detected",
      "query": 'host.name: "target-server" AND message: "vulnerabilities/xss_r"',
-     "index": ["filebeat*"], "severity": "medium", "risk_score": 47},
+     "index": ["filebeat-*"], "severity": "medium", "risk_score": 50},
     {"name": "Command Injection Detected",
      "query": 'host.name: "target-server" AND message: "vulnerabilities/exec"',
      "index": ["filebeat*"], "severity": "high", "risk_score": 73},
     {"name": "File Inclusion Detected",
      "query": 'host.name: "target-server" AND message: "vulnerabilities/fi"',
-     "index": ["filebeat*"], "severity": "medium", "risk_score": 47},
+     "index": ["filebeat*"], "severity": "high", "risk_score": 73},
     {"name": "SSH Brute Force Detected",
      "query": 'host.name: "target-server" AND message: "Failed password"',
      "index": ["filebeat*"], "severity": "critical", "risk_score": 90},
     {"name": "Port Scan Detected",
      "query": 'host.name: "target-server" AND message: "PORTSCAN"',
-     "index": ["filebeat*"], "severity": "low", "risk_score": 21},
+     "index": ["filebeat*"], "severity": "medium", "risk_score": 50},
 ]
 
 
@@ -396,7 +397,9 @@ class SiemService:
                 "query": query,
                 "index": idx if isinstance(idx, list) else [idx],
                 "severity": p.get("severity", "") or "",
-                "risk_score": p.get("risk_score", 0) or 0,
+                # Kibana stores the rule risk score as camelCase "riskScore";
+                # keep "risk_score" as a fallback for older exports.
+                "risk_score": p.get("riskScore") or p.get("risk_score") or 0,
             })
         if not defs:
             log.warning("[siem] no enabled Kibana rules found; using fallback set")

@@ -980,8 +980,9 @@ def create_case():
             blocked_now = True
         else:
             _tk_act(t, "Block requested but not permitted for this account", current_user.id)
-    db.session.commit()
+    # audit BEFORE commit: _audit only adds the row, so it must ride on this commit
     _audit("ticket_created", "created ticket T-%d '%s'" % (t.id, t.title))
+    db.session.commit()
     unames = {u.id: u.username for u in User.query.all()}
     out = _tk_json(t, unames)
     out["blocked"] = out["blocked"] or blocked_now
@@ -1392,8 +1393,8 @@ def delete_case(tid):
     ).delete(synchronize_session=False)
     t.events = []            # clear the association rows
     db.session.delete(t)
+    _audit("ticket_deleted", "deleted ticket T-%d" % tid)   # before commit, see create_case
     db.session.commit()
-    _audit("ticket_deleted", "deleted ticket T-%d" % tid)
     return jsonify({"ok": True})
 
 
@@ -4474,6 +4475,7 @@ def create_asset():
 @login_required
 def update_asset(asset_id):
     from app.enrichment.asset_assessment import Asset
+    from config.settings import settings
     deny = _require_cap("manage_assets")
     if deny:
         return deny
